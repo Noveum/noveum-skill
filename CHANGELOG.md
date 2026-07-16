@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.0 — 2026-07-16
+
+Published to ClawHub with GitHub auto-sync.
+
+- **ClawHub metadata** in `SKILL.md` frontmatter (`metadata.openclaw`): `emoji`,
+  `homepage`, `primaryEnv`, `requires.env`, and per-variable `envVars` descriptions
+  (`NOVEUM_API_KEY` required; `NOVEUM_ORG_SLUG`/`NOVEUM_PROJECT`/`NOVEUM_ENDPOINT`
+  optional). Added top-level `version` + `homepage`. Description expanded with discovery
+  keywords (AI reliability, QA, voice, LangGraph, AutoFix) — still Claude Code compatible.
+- **Auto-sync workflow** `.github/workflows/clawhub-publish.yml`: publishing a GitHub
+  Release republishes to ClawHub under `@noveum-ai` via the official
+  `openclaw/clawhub/.github/workflows/skill-publish.yml@v0.23.1` reusable workflow
+  (`skill_path: noveum`); manual runs default to a dry-run.
+- README: ClawHub install + publishing section; framed as Noveum's AI Reliability & QA
+  Engineer.
+
 ## 0.3.0 — 2026-07-16
 
 Context safety + full live E2E dogfood (all 7 steps run against production by an agent

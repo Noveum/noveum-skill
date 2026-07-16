@@ -1,8 +1,13 @@
-# Noveum Agent Skill
+# Noveum Agent Skill — the AI Reliability & QA Engineer
 
 The official [Agent Skill](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview)
-for [Noveum.ai](https://noveum.ai) — give your coding agent everything it needs to set up
-and operate Noveum **end to end, inside your own environment**.
+for [Noveum.ai](https://noveum.ai) — Noveum's **AI reliability & QA engineer**, packaged so
+your coding agent can run the whole loop **inside your own environment**: instrument →
+verify → evaluate → diagnose → fix → verify. It gives the agent everything it needs to set
+up and operate Noveum **end to end**, and your code never leaves your machines.
+
+Install it from [ClawHub](https://clawhub.ai/skills/noveum) (`clawhub install noveum`) or
+vendor it straight from this repo (below).
 
 ```mermaid
 flowchart LR
@@ -113,6 +118,22 @@ noveum/
 - `evals/scenarios.json` holds the test scenarios each release is checked against; CI
   validates frontmatter, link integrity, script syntax on a Python 3.9 floor, and the
   stdlib-only rule.
+
+## Published on ClawHub
+
+The skill is published to [ClawHub](https://clawhub.ai) under
+[**@noveum-ai**](https://clawhub.ai/creators/noveum-ai). Install into any OpenClaw-compatible
+agent with:
+
+```bash
+clawhub install noveum
+```
+
+**Auto-sync:** publishing a GitHub Release here republishes the skill to ClawHub
+automatically, via `.github/workflows/clawhub-publish.yml` (which calls the official
+[`openclaw/clawhub` reusable workflow](https://docs.openclaw.ai/clawhub/) with
+`owner: noveum-ai`). Manual runs default to a dry-run preview. The only setup is a repo
+secret `CLAWHUB_TOKEN` (a ClawHub token for a publisher with access to `@noveum-ai`).
 
 ## Versioning & updates
 

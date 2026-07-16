@@ -1,0 +1,32 @@
+name: Publish to ClawHub
+
+# Auto-syncs the skill to ClawHub (clawhub.ai) under the @noveum-ai org.
+# - Publishing a GitHub Release publishes the skill for real.
+# - Manual runs default to a dry run (preview only) so you can inspect the plan.
+# Requires repo secret CLAWHUB_TOKEN (a ClawHub token for a publisher with
+# access to @noveum-ai).
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preview only — no publish"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    uses: openclaw/clawhub/.github/workflows/skill-publish.yml@v0.23.1
+    with:
+      # The skill lives in ./noveum (not a skills/ catalog), so target it directly.
+      skill_path: noveum
+      owner: noveum-ai
+      # Real publish on release; manual runs honor the dry_run input (default true).
+      dry_run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+    secrets:
+      clawhub_token: ${{ secrets.CLAWHUB_TOKEN }}

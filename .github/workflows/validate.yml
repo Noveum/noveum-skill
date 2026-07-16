@@ -21,24 +21,29 @@ jobs:
         run: |
           ! grep -nE '^\s*(import|from)\s+(requests|httpx|pydantic|click|rich)\b' noveum/scripts/*.py
 
-      - name: SKILL.md frontmatter is valid
+      - name: SKILL.md frontmatter is valid (real YAML parse)
         run: |
+          pip install pyyaml >/dev/null
           python - <<'EOF'
-          import re, sys
+          import re, yaml
           text = open("noveum/SKILL.md").read()
           m = re.match(r"^---\n(.*?)\n---\n", text, re.S)
           assert m, "missing YAML frontmatter"
-          fm = m.group(1)
-          name = re.search(r"^name:\s*(\S+)\s*$", fm, re.M)
-          desc = re.search(r"^description:\s*(.+)$", fm, re.M)
-          assert name, "missing name"
-          assert desc and desc.group(1).strip(), "missing description"
-          assert re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", name.group(1)), "name must be lowercase/digits/hyphens"
-          assert len(name.group(1)) <= 64, "name too long"
-          assert len(desc.group(1)) <= 1024, "description too long"
-          body = text[m.end():]
-          assert len(body.splitlines()) <= 500, "SKILL.md body must stay under 500 lines"
-          print("frontmatter OK")
+          # Must parse as real YAML — a stray ': ' in an unquoted description breaks
+          # ClawHub and other strict parsers even when a regex check passes.
+          d = yaml.safe_load(m.group(1))
+          assert isinstance(d, dict), "frontmatter is not a mapping"
+          name, desc = d.get("name"), d.get("description")
+          assert isinstance(name, str) and re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", name) and len(name) <= 64, "bad name"
+          assert isinstance(desc, str) and desc.strip() and len(desc) <= 1024, "bad description"
+          # ClawHub runtime metadata, when present, must be well-formed.
+          oc = (d.get("metadata") or {}).get("openclaw")
+          if oc:
+              assert isinstance(oc.get("envVars", []), list), "openclaw.envVars must be a list"
+              req = (oc.get("requires") or {}).get("env", [])
+              assert isinstance(req, list), "openclaw.requires.env must be a list"
+          assert len(text[m.end():].splitlines()) <= 500, "SKILL.md body must stay under 500 lines"
+          print("frontmatter OK (YAML valid)")
           EOF
 
       - name: Reference links resolve (one level deep)
