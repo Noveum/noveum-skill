@@ -44,10 +44,15 @@ GET /v1/traces/filter-values        // all facet values incl. serviceVersions
 GET /v1/traces/connection-status    // has this org ever connected telemetry
 ```
 
-Response envelope: `{ "success": true, "traces": [...] }`. Note the asymmetry: query
-params are camelCase (`includeSpans`, `sessionId`), while trace payload fields are
+Response envelopes (live-verified): list →
+`{ success, traces[], pagination{total, limit, offset, has_more}, timestamp }` (use
+`pagination.has_more` + `from` to page); single trace → `{ success, data: <trace> }`
+(note `data`, not `trace`); spans → `{ success, trace_id, spans[] }`. Note the asymmetry:
+query params are camelCase (`includeSpans`, `sessionId`), while payload fields are
 snake_case (`span_count`, `session_id` under `metadata`). `service_version` is the
-literal string `"unknown"` when the app never set one.
+literal string `"unknown"` when the app never set one. **Timestamps in trace/item bodies
+are ClickHouse strings** (`"2025-11-23 19:55:18.591000000"`, no `T`, no zone) while
+job/run objects use ISO-8601 — don't parse them with one format.
 
 ## Polling contract (memorize this)
 
@@ -66,6 +71,9 @@ matching GET until a terminal status. Never call queued work "done".
 
 - Eval: 1 credit × items × premium(LLM-judge) scorers; rule-based scorers free; if any
   premium scorers are used, minimum 5 (else 400 `MIN_PREMIUM_SCORERS_REQUIRED`).
+  Tell premium from free via `config.evaluationType` on `GET /v1/scorers` entries:
+  `"llm-based"` = premium, `"rule-based"` = free (live-verified; rule-based-only jobs
+  charge 0 and skip the min-5 rule).
 - NovaPilot: per analyzed item (preview count via `POST /v1/novapilot/filter-preview`).
 - Out of credits → 429 `CREDIT_QUOTA_EXCEEDED` (with `Retry-After`). Stop; tell the user.
   Buying credits is a human/dashboard action — never attempt it.

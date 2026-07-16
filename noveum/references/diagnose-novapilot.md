@@ -26,7 +26,11 @@ count first and state the estimate to the user before running).
 ```
 GET /v1/novapilot/reports/:reportId?projectId=<project>    (5s)
 ```
-Terminal: `completed | failed`. On `completed` the response carries the full `analysis`.
+Terminal: `completed | failed`. On `completed` the response carries the full `analysis` —
+which can be **hundreds of KB**. Do not poll with the full payload in context; once status
+is terminal, download it to disk and read sections selectively:
+`python scripts/fetch_to_file.py "/v1/novapilot/reports/<id>?projectId=<p>" --out /tmp/report.json`
+(see `context-safety.md`).
 
 ## Read the report
 
