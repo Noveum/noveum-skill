@@ -26,13 +26,18 @@ it up in a codebase and operating it.
 - The API key lives in the `NOVEUM_API_KEY` environment variable. Never write it into
   source files or commits.
 
-## Prerequisites (human steps — never attempt these yourself)
+## Step 0 — connect
 
-Ask the user for, from the https://noveum.ai dashboard:
+Full instructions (accounts, API keys, REST Bearer auth, MCP over OAuth **or** API key):
+[references/getting-connected.md](references/getting-connected.md). Short version — ask
+the user for, from the https://noveum.ai dashboard:
 1. **API key** (`NOVEUM_API_KEY`) — Settings → API Keys (or the onboarding starter key).
    Agents cannot create API keys.
 2. **Organization slug** (`NOVEUM_ORG_SLUG`) — visible in the dashboard URL.
 3. **Project name** (`NOVEUM_PROJECT`) — any string; auto-created on first trace.
+
+Prove the connection before anything else: `GET /v1/status` must return 200 with a
+`usage` block (or read `noveum://org-status` over MCP).
 
 ## The journey
 
@@ -52,6 +57,17 @@ Noveum setup progress:
 
 Steps 3–6 run entirely on the Noveum platform (API/MCP calls — no code changes).
 Steps 1 and 7 change code: smallest reviewable diff, on a branch, PR unless told otherwise.
+
+```mermaid
+flowchart TD
+    S0[0 Connect: key + status check] --> S1[1 Integrate the SDK]
+    S1 --> S2{2 Verify completeness:<br/>check_integration.py}
+    S2 -->|gaps| S1
+    S2 -->|pass| S3[3 Build eval dataset]
+    S3 --> S4[4 Run evaluations] --> S5[5 NovaPilot diagnosis]
+    S5 --> S6[6 Backtest fixes] --> S7[7 Apply fixes via PR]
+    S7 -->|post-deploy traffic, new service_version| S2
+```
 
 ## Step 1 — pick the integration reference by framework
 
@@ -74,7 +90,7 @@ calls through a Python service, or POST trace JSON directly (ingest contract in
 - Step 5: [references/diagnose-novapilot.md](references/diagnose-novapilot.md)
 - Step 6: [references/experiments-autofix.md](references/experiments-autofix.md)
 - Step 7: [references/apply-fixes.md](references/apply-fixes.md)
-- MCP connection (recommended before step 3): [references/connect-mcp.md](references/connect-mcp.md)
+- Connection modes (REST, MCP OAuth, MCP API-key): [references/getting-connected.md](references/getting-connected.md)
 - API essentials, polling contract, credits: [references/api-reference.md](references/api-reference.md)
 - When something fails: [references/troubleshooting.md](references/troubleshooting.md)
 

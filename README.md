@@ -2,15 +2,40 @@
 
 The official [Agent Skill](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview)
 for [Noveum.ai](https://noveum.ai) — give your coding agent everything it needs to set up
-and operate Noveum **end to end, inside your own environment**:
+and operate Noveum **end to end, inside your own environment**.
 
-1. Integrate the `noveum-trace` SDK (LangChain/LangGraph, CrewAI, LiveKit, Pipecat, or manual)
-2. **Verify the integration** — a trace-completeness report card, not just "it compiled"
-3. Build eval datasets from real traffic
-4. Select scorers and run evaluations
-5. Diagnose failures with NovaPilot
-6. Backtest fixes with AutoFix experiments
-7. Apply validated fixes and verify them in production
+```mermaid
+flowchart LR
+    subgraph you ["Your environment (code never leaves)"]
+        A["Your coding agent<br/>+ this skill"]
+        B["Your repo<br/>noveum-trace SDK"]
+        A -->|integrates & fixes| B
+    end
+    subgraph noveum ["Noveum platform"]
+        C[Traces] --> D[Datasets & evals]
+        D --> E[NovaPilot diagnosis]
+        E --> F[AutoFix backtesting]
+    end
+    B -->|"telemetry only (HTTPS)"| C
+    F -->|"validated fixes & reports"| A
+    A <-->|"REST / MCP (OAuth or API key)"| C
+```
+
+The skill walks the agent through an acceptance-gated journey — it cannot declare a step
+done until the platform confirms it:
+
+```mermaid
+flowchart TD
+    S0[0 Connect: API key or MCP OAuth] --> S1[1 Integrate the SDK]
+    S1 --> S2{2 Verify trace completeness}
+    S2 -->|gaps: fix them| S1
+    S2 -->|report card passes| S3[3 Build eval dataset from real traffic]
+    S3 --> S4[4 Select scorers & run evals]
+    S4 --> S5[5 NovaPilot diagnosis]
+    S5 --> S6[6 Backtest fixes as experiments]
+    S6 --> S7[7 Apply validated fixes via PR]
+    S7 -->|"post-deploy traffic (new service_version)"| S2
+```
 
 Works with Claude Code, Claude (Enterprise/Team skills), the Claude Agent SDK, and any
 agent that reads `SKILL.md`-style instructions.
@@ -47,27 +72,47 @@ skill so every seat gets it with zero setup.
 Then just ask your agent: *"Integrate Noveum into this repo and verify traces are
 flowing."*
 
+## Connecting: two auth modes
+
+- **MCP over OAuth 2.1** — interactive clients (Cursor, Claude & Claude Code, VS Code,
+  ChatGPT, Windsurf, Cline, Zed, Goose) add just `https://noveum.ai/api/mcp` and get a
+  sign-in + consent screen. No key handling at all.
+- **Bearer API key** — headless agents, CI, and plain REST use
+  `Authorization: Bearer $NOVEUM_API_KEY` against the same endpoints.
+
+Details, decision guide, and `mcp.json` templates:
+[`noveum/references/getting-connected.md`](noveum/references/getting-connected.md).
+
 ## What's inside
 
 ```
 noveum/
-├── SKILL.md                     # the journey: 7 steps, each with an acceptance check
-├── references/                  # loaded on demand (progressive disclosure)
-│   ├── integrate-langchain.md   #   + crewai, livekit, pipecat, openai-manual
-│   ├── verify-traces.md         # the completeness report card (step-1 gate)
-│   ├── setup-evals.md           # datasets → ETL → scorers → eval runs
-│   ├── diagnose-novapilot.md    # diagnosis reports
-│   ├── experiments-autofix.md   # backtested fixes & experiments
-│   ├── apply-fixes.md           # fix → repo edit → PR → verify
-│   ├── connect-mcp.md           # hosted MCP server (OAuth 2.1 or API key)
-│   ├── api-reference.md         # endpoints, polling contract, credits
+├── SKILL.md                       # the journey: connect + 7 steps, acceptance-gated
+├── references/                    # loaded on demand (progressive disclosure)
+│   ├── getting-connected.md       # accounts, keys, REST auth, MCP OAuth + API-key modes
+│   ├── integrate-langchain.md     #   + crewai, livekit, pipecat, openai-manual
+│   ├── verify-traces.md           # the completeness report card (step-1 gate)
+│   ├── setup-evals.md             # datasets → ETL → scorers → eval runs
+│   ├── diagnose-novapilot.md      # diagnosis reports
+│   ├── experiments-autofix.md     # backtested fixes & experiments
+│   ├── apply-fixes.md             # fix → repo edit → PR → verify
+│   ├── api-reference.md           # endpoints, polling contract, credits
 │   └── troubleshooting.md
 ├── scripts/
-│   ├── send_test_trace.py       # prove connectivity with one known-good trace
-│   └── check_integration.py     # the trace-completeness report card
+│   ├── send_test_trace.py         # prove connectivity with one known-good trace
+│   └── check_integration.py       # the trace-completeness report card
 └── assets/
     └── mcp.json.template
 ```
+
+## Quality & provenance
+
+- Attribute vocabulary and field-gap warnings validated against production Noveum
+  integrations (LangChain, LiveKit, Pipecat, manual SDK deployments).
+- Endpoint shapes and query parameters live-tested against the production API.
+- `evals/scenarios.json` holds the test scenarios each release is checked against; CI
+  validates frontmatter, link integrity, script syntax on a Python 3.9 floor, and the
+  stdlib-only rule.
 
 ## Versioning & updates
 

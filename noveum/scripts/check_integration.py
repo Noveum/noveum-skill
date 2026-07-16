@@ -110,9 +110,10 @@ def main() -> int:
     endpoint = os.environ.get("NOVEUM_ENDPOINT", DEFAULT_ENDPOINT).rstrip("/")
 
     try:
+        # Live-validated query params: size / from / includeSpans (camelCase).
         payload = api_get(
             endpoint, api_key, "/v1/traces",
-            {"project": args.project, "limit": args.limit, "include_spans": "true",
+            {"project": args.project, "size": args.limit, "includeSpans": "true",
              "sort": "start_time:desc"},
         )
     except urllib.error.HTTPError as e:
@@ -145,7 +146,8 @@ def main() -> int:
         meta = t.get("metadata") or {}
         if t.get("session_id") or (isinstance(meta, dict) and meta.get("session_id")):
             session_ids += 1
-        if t.get("service_version"):
+        # The SDK writes the literal "unknown" when no version was configured.
+        if t.get("service_version") not in (None, "", "unknown"):
             svc_versions += 1
         if t.get("status") == "error":
             error_traces += 1

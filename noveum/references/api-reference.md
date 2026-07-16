@@ -32,16 +32,22 @@ Minimal valid Trace:
 Notes: the format is Noveum's own JSON (not OTLP). `project` auto-creates the project.
 Ingest is async (returns job ids) — confirmation = querying the trace back, not the 2xx.
 
-## Query traces
+## Query traces (params live-validated)
 
 ```
-GET /v1/traces?project=<p>&limit=20&include_spans=true
-      &status=error&service_version=<v>&sort=start_time:desc&offset=0
+GET /v1/traces?project=<p>&size=20&from=0&includeSpans=true
+      &status=error&service_version=<v>&sort=start_time:desc
+      &sessionId=<s>&userId=<u>&searchTerm=<q>&environment=<e>
 GET /v1/traces/:id
 GET /v1/traces/:traceId/spans
 GET /v1/traces/filter-values        // all facet values incl. serviceVersions
 GET /v1/traces/connection-status    // has this org ever connected telemetry
 ```
+
+Response envelope: `{ "success": true, "traces": [...] }`. Note the asymmetry: query
+params are camelCase (`includeSpans`, `sessionId`), while trace payload fields are
+snake_case (`span_count`, `session_id` under `metadata`). `service_version` is the
+literal string `"unknown"` when the app never set one.
 
 ## Polling contract (memorize this)
 
@@ -63,7 +69,9 @@ matching GET until a terminal status. Never call queued work "done".
 - NovaPilot: per analyzed item (preview count via `POST /v1/novapilot/filter-preview`).
 - Out of credits → 429 `CREDIT_QUOTA_EXCEEDED` (with `Retry-After`). Stop; tell the user.
   Buying credits is a human/dashboard action — never attempt it.
-- Usage snapshot: `GET /v1/status`.
+- Usage snapshot: `GET /v1/status` → `{ status, plan{key, period_*}, usage{spans_this_period,
+  credits_used, rate_limit_*}, quotas{...} }` (live-validated shape) — also the cheapest
+  "is my key valid" probe.
 
 ## Common errors
 

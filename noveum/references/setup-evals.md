@@ -1,7 +1,7 @@
 # Set up datasets and evaluations (steps 3–4)
 
 All endpoints: base `https://api.noveum.ai/api`, header `Authorization: Bearer $NOVEUM_API_KEY`.
-Prefer the MCP tools if connected (`connect-mcp.md`) — they mirror these routes exactly.
+Prefer the MCP tools if connected (`getting-connected.md`) — they mirror these routes exactly.
 Poll cadences and terminal statuses: `api-reference.md`.
 
 ## 3a. Create a dataset
