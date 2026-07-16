@@ -40,8 +40,11 @@
   representative `traceIds`, or smoke-test via `POST /v1/etl-jobs/run-mapper`.
 - Eval run stuck `queued` → workers are queue-based; keep polling per the cadence table.
   Minutes-long queues can be normal; hours are not — tell the user to check org status.
-- Dataset item content looks truncated (`[Object]`, cut strings) → you forgot
-  `?fullContent=true` on the items list; single-item GET is always full.
+- Dataset item content looks cut off mid-string → list views truncate some long columns
+  **silently, with no marker** (`content`, `metadata`, `agent_response`, `system_prompt`,
+  `conversation_context`). Read the single item (`GET .../items/:itemId` — returns full
+  content) or stream the full list to disk with `scripts/fetch_to_file.py` — never
+  `fullContent=true` inline on a list (see `context-safety.md`).
 - 429s: rate-limit 429 → exponential backoff; `CREDIT_QUOTA_EXCEEDED` → stop, report.
 
 ## When stuck

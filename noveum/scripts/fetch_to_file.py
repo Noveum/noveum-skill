@@ -58,11 +58,14 @@ def main() -> int:
     digest = hashlib.sha256()
     total = 0
     head = b""
+    declared_len = None
     try:
         with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_S) as res, open(
             args.out, "wb"
         ) as out:
             status = res.status
+            cl = res.headers.get("Content-Length")
+            declared_len = int(cl) if cl and cl.isdigit() else None
             while True:
                 chunk = res.read(CHUNK_BYTES)
                 if not chunk:
@@ -79,6 +82,28 @@ def main() -> int:
     except urllib.error.URLError as e:
         print(f"NETWORK ERROR reaching {url}: {e.reason}")
         return 2
+    except OSError as e:
+        # Mid-body timeout/reset after urlopen succeeded — a partial file exists.
+        try:
+            os.remove(args.out)
+        except OSError:
+            pass
+        print(f"NETWORK ERROR mid-download from {url}: {e} (partial file removed)")
+        return 2
+
+    # http.client deliberately does NOT raise on short bodies; a dropped
+    # connection would otherwise masquerade as success — the exact corruption
+    # this tool exists to prevent.
+    if declared_len is not None and total != declared_len:
+        try:
+            os.remove(args.out)
+        except OSError:
+            pass
+        print(
+            f"TRUNCATED DOWNLOAD: got {total} of {declared_len} declared bytes "
+            f"from {url} — partial file removed. Retry, or page with smaller size."
+        )
+        return 2
 
     print(
         json.dumps(
@@ -87,6 +112,7 @@ def main() -> int:
                 "bytes": total,
                 "sha256": digest.hexdigest(),
                 "status": status,
+                "contentLength": declared_len,
             }
         )
     )

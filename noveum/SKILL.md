@@ -3,7 +3,7 @@ name: noveum
 description: Sets up and operates Noveum.ai end to end in a codebase — integrates the noveum-trace SDK, verifies traces are complete, builds eval datasets, runs evaluations and NovaPilot diagnosis, and applies validated fixes. Use when integrating Noveum, adding AI tracing or observability, setting up AI evals, verifying a Noveum integration, connecting to the Noveum MCP server, or applying Noveum-recommended fixes.
 license: MIT
 metadata:
-  version: 0.1.0
+  version: 0.3.0
   homepage: https://noveum.ai
   source: https://github.com/Noveum/noveum-skill
 ---

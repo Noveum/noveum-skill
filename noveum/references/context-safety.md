@@ -9,8 +9,8 @@ fail with this platform.**
 
 | Payload | Measured |
 |---|---|
-| 10 traces with `includeSpans=true` (49 spans/trace) | **171 KB** (~17 KB/trace; span-heavy voice traces larger) |
-| ONE trace by id (49 spans) | **145 KB** |
+| 10 traces with `includeSpans=true` (mixed span counts, mostly small) | **171 KB** |
+| ONE span-heavy trace by id (49 spans) | **145 KB** — size scales with `span_count`, not trace count; budget accordingly |
 | Spans of one trace (`/traces/:id/spans`) | **132 KB** |
 | Scorer catalog (`GET /v1/scorers`, ~130 scorers) | **169 KB** — fetch once, keep only the name→id/type map |
 | 2 traces, no spans | ~3.5 KB (metadata-first querying is cheap) |
@@ -34,11 +34,14 @@ used the wrong access pattern, never something to work around by "parsing what a
    Never `cat` the file or Read it whole.
 3. **On MCP, prefer `@noveum/mcp-local`** — it exists exactly for this: mirrors the
    hosted tools but saves large bodies to local files and returns a tiny
-   `{savedTo, bytes, sha256}` reference. On the hosted server, keep requests small
-   (`size≤5` with `includeSpans`, `size≤20` without) and page with `from`.
-4. **Dataset items:** browse with the default (truncated) list view; use
-   `fullContent=true` only for a **single item** (`GET .../items/:itemId`) or when
-   streaming the whole list **to disk**. Never `fullContent=true` inline on a list.
+   `{savedTo, bytes, sha256}` reference. On the hosted server, budget by **span count,
+   not trace count** (one 49-span trace alone is ~145 KB): filter with `span_count_lte`
+   or fetch metadata first, keep `includeSpans` requests to a handful of small traces,
+   `size≤20` without spans, and page with `from`.
+4. **Dataset items:** browse with the default list view (but never QA content from it —
+   truncation is silent and unmarked); for full content use the single-item
+   `GET .../items/:itemId` (returns everything, no flag needed) or stream the whole list
+   **to disk** with `fullContent=true`. Never `fullContent=true` inline on a list.
 5. **Reports:** download once to disk (`fetch_to_file.py` on the report endpoint, or the
    `noveum://novapilot-report-markdown` resource saved via mcp-local), then read
    sections — recommendations first, evidence ids on demand.
@@ -51,4 +54,6 @@ used the wrong access pattern, never something to work around by "parsing what a
 
 - A tool result containing `… [truncated N chars]` or an unparseable tail → refetch to
   disk (rule 2/3); do not retry inline with a bigger limit.
-- `Content-Length` in the head preview much larger than expected → stop and page.
+- `fetch_to_file.py` prints `contentLength` in its summary and **fails (exit 2, partial
+  file removed)** if the download is shorter than the server declared — never trust a
+  file from a run that didn't exit 0.
