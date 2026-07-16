@@ -31,21 +31,31 @@ that response inlines the full `analysis` (hundreds of KB) straight into your co
 Once the summary shows `completed`, download the full report to disk and read it
 selectively:
 `python scripts/fetch_to_file.py "/v1/novapilot/reports/<id>?projectId=<p>" --out /tmp/report.json`
-then extract only what you need (e.g.
-`python3 -c "import json;a=json.load(open('/tmp/report.json'))['analysis'];print(a['overallHealth']);[print(r['issue_description'][:120]) for r in a['recommendations'][:5]]"`).
+
+**Live-verified shape** (a real production report, 140 KB): envelope is
+`{success, report}`; the analysis is double-nested at `report.analysis.analysis`; and
+`recommendations` is a **bucket tree** (`{systemPrompt, tool, other} × {critical, high,
+medium, low}`), not a flat list. Tested extraction:
+
+```
+python3 -c "import json;a=json.load(open('/tmp/report.json'))['report']['analysis']['analysis'];print(a['overallHealth']);recs=[r for s in a['recommendations'].values() for sev in s.values() for r in sev];[print('-',r['title'][:100]) for r in recs[:5]]"
+```
+
 See `context-safety.md`.
 
 ## Read the report
 
-Key fields in `analysis`:
+Key fields under `report.analysis.analysis` (live-verified):
 - `overallHealth { score, grade, summary }`
-- `recommendations[]` — each has `issue_description`, `recommended_change`, `justification`,
-  `confidence`, affected counts, and — when the fix is a concrete prompt edit —
-  verbatim `search` / `replace` strings (character-exact substrings of the live system
-  prompt) plus `fixType`.
+- `recommendations{surface}{severity}[]` — each rec has `id`, `title`, `description`,
+  `issue_description`, `current_state`, `recommended_change`, `action_items`,
+  `confidence`, `affected_scorers/items/traces`, `evidence`, `implementation_effort`.
 - `systemPromptAnalysis { currentPrompt, promptIssues[] }` — prompt text reconstructed
-  from traces, with per-issue search/replace.
-- `failurePatterns[]`, `scorerBreakdown[]`, `agentFleet` (multi-agent detection).
+  from traces; each issue carries `severity`, `category`, `issue`, `impact`, and — when
+  the fix is a concrete edit — verbatim `search` / `replace` (character-exact substrings
+  of the live prompt) plus `fixType` and affected ids/counts.
+- `failurePatterns[]`, `rootCauses`, `scorerBreakdown[]`, `scorerFailureRates`,
+  `statistics`, `metadata`.
 
 A markdown rendering exists as the MCP resource
 `noveum://novapilot-report-markdown?reportId=<id>&projectId=<project>` — but it inlines
