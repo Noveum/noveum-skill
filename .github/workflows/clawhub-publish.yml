@@ -18,6 +18,11 @@ on:
 
 permissions:
   contents: read
+  # The reusable workflow's first step performs a GitHub OIDC token exchange
+  # ("Resolve ClawHub workflow source") and hard-fails without this. A called
+  # workflow can never exceed the caller's permission ceiling, so it must be
+  # granted here.
+  id-token: write
 
 jobs:
   publish:
