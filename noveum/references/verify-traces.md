@@ -38,7 +38,7 @@ NOVEUM_API_KEY=... python scripts/check_integration.py --project <NOVEUM_PROJECT
 # to also report the onboarding milestone: add --org-slug <NOVEUM_ORG_SLUG>
 ```
 
-The script queries recent traces (`GET /v1/traces?include_spans=true`) and grades each
+The script queries recent traces (`GET /v1/traces?includeSpans=true`) and grades each
 check. The attribute names below are what real integrations emit — the script accepts
 all known variants:
 
