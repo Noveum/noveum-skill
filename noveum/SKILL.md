@@ -1,11 +1,33 @@
 ---
 name: noveum
-description: Sets up and operates Noveum.ai end to end in a codebase — integrates the noveum-trace SDK, verifies traces are complete, builds eval datasets, runs evaluations and NovaPilot diagnosis, and applies validated fixes. Use when integrating Noveum, adding AI tracing or observability, setting up AI evals, verifying a Noveum integration, connecting to the Noveum MCP server, or applying Noveum-recommended fixes.
+description: The Noveum AI reliability & QA engineer for LLM, agent, and voice apps — sets up and operates Noveum.ai end to end in a codebase, integrating the noveum-trace SDK (LangChain, LangGraph, CrewAI, LiveKit, Pipecat, or manual), verifying traces are complete, building evaluation datasets from real traffic, running evals and NovaPilot diagnosis, backtesting fixes with AutoFix, and applying validated fixes as pull requests. Context-safe with large trace and report payloads, and connects over the Noveum MCP server (OAuth or API key). Use when integrating Noveum, adding AI tracing or observability, setting up AI evals, verifying a Noveum integration, connecting to the Noveum MCP server, or applying Noveum-recommended fixes.
 license: MIT
+version: 0.4.0
+homepage: https://noveum.ai/docs/platform/agent-skill
 metadata:
-  version: 0.3.0
+  version: 0.4.0
   homepage: https://noveum.ai
   source: https://github.com/Noveum/noveum-skill
+  openclaw:
+    emoji: "🔬"
+    homepage: https://noveum.ai/docs/platform/agent-skill
+    primaryEnv: NOVEUM_API_KEY
+    requires:
+      env:
+        - NOVEUM_API_KEY
+    envVars:
+      - name: NOVEUM_API_KEY
+        required: true
+        description: Org-scoped Noveum API key (nv_...). The only required credential — created in the dashboard, read from the environment, never committed.
+      - name: NOVEUM_ORG_SLUG
+        required: false
+        description: Organization slug from the dashboard URL. Enables onboarding-milestone reporting during trace verification.
+      - name: NOVEUM_PROJECT
+        required: false
+        description: Project name for traces. Auto-created on first trace if it does not exist.
+      - name: NOVEUM_ENDPOINT
+        required: false
+        description: API base URL override (default https://api.noveum.ai/api). Set for self-hosted or VPC deployments.
 ---
 
 # Noveum AI Engineer skill
