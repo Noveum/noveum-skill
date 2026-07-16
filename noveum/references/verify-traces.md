@@ -15,8 +15,9 @@ so this gate is mandatory.
 ## 0. Local pre-check (no network, fastest loop)
 
 Set `NOVEUM_DEV_MODE=true` and run the app once: each trace is also written as a JSON
-file under `.noveum_trace_dev/`. Inspect one — spans present, attributes as expected.
-Delete the directory afterwards; never commit it.
+file under `.noveum_trace_dev/`. Inspect one **selectively** (span names + attribute keys
+via grep/jq — a span-heavy trace file is ~145 KB; don't read it whole). Delete the
+directory afterwards; never commit it.
 
 ## 1. Prove connectivity with a known-good trace
 

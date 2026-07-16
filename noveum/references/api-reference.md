@@ -35,14 +35,19 @@ Ingest is async (returns job ids) — confirmation = querying the trace back, no
 ## Query traces (params live-validated)
 
 ```
-GET /v1/traces?project=<p>&size=20&from=0&includeSpans=true
-      &status=error&service_version=<v>&sort=start_time:desc
-      &sessionId=<s>&userId=<u>&searchTerm=<q>&environment=<e>
-GET /v1/traces/:id
-GET /v1/traces/:traceId/spans
-GET /v1/traces/filter-values        // all facet values incl. serviceVersions
+GET /v1/traces?project=<p>&size=20&from=0&sort=start_time:desc      // metadata only — cheap
+      &status=error&service_version=<v>&sessionId=<s>&userId=<u>
+      &searchTerm=<q>&environment=<e>&span_count_lte=<n>
+GET /v1/traces/:id                  // LARGE for span-heavy traces (~145 KB at 49 spans)
+GET /v1/traces/:traceId/spans       // same — fetch via scripts/fetch_to_file.py
+GET /v1/traces/filter-values        // facet values incl. serviceVersions; grows with org
 GET /v1/traces/connection-status    // has this org ever connected telemetry
 ```
+
+**`includeSpans=true` is a context hazard** — size scales with span_count, not trace
+count (one 49-span trace ≈ 145 KB). Query metadata first, then fetch the few traces you
+actually need to disk: `python scripts/fetch_to_file.py "/v1/traces/<id>" --out /tmp/t.json`.
+See `context-safety.md` before any bulk read.
 
 Response envelopes (live-verified): list →
 `{ success, traces[], pagination{total, limit, offset, has_more}, timestamp }` (use
@@ -65,7 +70,7 @@ matching GET until a terminal status. Never call queued work "done".
 | Mapper codegen | `GET /v1/etl-jobs/:id/novaeval/:runId` | 2s (cap ~5m) | completed·failed·cancelled |
 | Recommend scorers | `GET /v1/eval-jobs/recommend-scorers/:jobId` | 3s (cap ~5m) | completed·failed·cancelled |
 | Eval run | `GET /v1/eval-jobs/:id/runs/:runId` | 3s active / 15s idle | completed·failed·cancelled |
-| NovaPilot | `GET /v1/novapilot/reports/:reportId` | 5s | completed·failed |
+| NovaPilot | `GET /v1/novapilot/reports?projectId=<p>&limit=5` (list — the by-id response inlines the full report on completion; see `context-safety.md` rule 7) | 5s | completed·failed |
 
 ## Credits & quotas (say the number before spending)
 

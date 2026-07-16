@@ -21,16 +21,19 @@ POST /v1/novapilot/run
 **Credits:** charged per analyzed item (check `POST /v1/novapilot/filter-preview` for the
 count first and state the estimate to the user before running).
 
-## Poll
+## Poll — status via the LIST endpoint, never the by-id one
 
 ```
-GET /v1/novapilot/reports/:reportId?projectId=<project>    (5s)
+GET /v1/novapilot/reports?projectId=<project>&limit=5     (5s)  → summaries incl. status
 ```
-Terminal: `completed | failed`. On `completed` the response carries the full `analysis` —
-which can be **hundreds of KB**. Do not poll with the full payload in context; once status
-is terminal, download it to disk and read sections selectively:
+Terminal: `completed | failed`. **Do not poll `GET /reports/:reportId`** — on `completed`
+that response inlines the full `analysis` (hundreds of KB) straight into your context.
+Once the summary shows `completed`, download the full report to disk and read it
+selectively:
 `python scripts/fetch_to_file.py "/v1/novapilot/reports/<id>?projectId=<p>" --out /tmp/report.json`
-(see `context-safety.md`).
+then extract only what you need (e.g.
+`python3 -c "import json;a=json.load(open('/tmp/report.json'))['analysis'];print(a['overallHealth']);[print(r['issue_description'][:120]) for r in a['recommendations'][:5]]"`).
+See `context-safety.md`.
 
 ## Read the report
 
@@ -44,9 +47,10 @@ Key fields in `analysis`:
   from traces, with per-issue search/replace.
 - `failurePatterns[]`, `scorerBreakdown[]`, `agentFleet` (multi-agent detection).
 
-A markdown rendering is available via the MCP resource
-`noveum://novapilot-report-markdown?reportId=<id>&projectId=<project>` — use it when
-summarizing for the user.
+A markdown rendering exists as the MCP resource
+`noveum://novapilot-report-markdown?reportId=<id>&projectId=<project>` — but it inlines
+the whole report: use it **only via `@noveum/mcp-local`** (which saves it to a file). On
+the hosted server, stick to the `fetch_to_file.py` download above.
 
 ## What to do with it
 

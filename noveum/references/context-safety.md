@@ -14,6 +14,7 @@ fail with this platform.**
 | Spans of one trace (`/traces/:id/spans`) | **132 KB** |
 | Scorer catalog (`GET /v1/scorers`, ~130 scorers) | **169 KB** — fetch once, keep only the name→id/type map |
 | 2 traces, no spans | ~3.5 KB (metadata-first querying is cheap) |
+| `GET /v1/traces/filter-values` | ~25 KB on a quiet org — **grows with activity** (user/session id lists); fetch to disk on active orgs |
 | Dataset items list with `fullContent=true` | easily **multiple MB** (voice items carry full transcripts + audio metadata) |
 | NovaPilot report (`analysis` JSON) | hundreds of KB |
 | AutoFix run state / quality report | hundreds of KB–MB |
@@ -38,16 +39,23 @@ used the wrong access pattern, never something to work around by "parsing what a
    not trace count** (one 49-span trace alone is ~145 KB): filter with `span_count_lte`
    or fetch metadata first, keep `includeSpans` requests to a handful of small traces,
    `size≤20` without spans, and page with `from`.
-4. **Dataset items:** browse with the default list view (but never QA content from it —
-   truncation is silent and unmarked); for full content use the single-item
-   `GET .../items/:itemId` (returns everything, no flag needed) or stream the whole list
-   **to disk** with `fullContent=true`. Never `fullContent=true` inline on a list.
+4. **Dataset items:** ids via `GET .../items/ids`; browse the default list view only in
+   small pages (some fields are never truncated, so even the default list is unbounded on
+   long-text datasets — and never QA content from it: truncation is silent and unmarked);
+   for full content use the single-item `GET .../items/:itemId` (returns everything, no
+   flag needed) or stream the whole list **to disk** with `fullContent=true`. Never
+   `fullContent=true` inline on a list.
 5. **Reports:** download once to disk (`fetch_to_file.py` on the report endpoint, or the
    `noveum://novapilot-report-markdown` resource saved via mcp-local), then read
    sections — recommendations first, evidence ids on demand.
-6. **Traces:** query metadata first (no spans); fetch spans per-trace
-   (`GET /v1/traces/:traceId/spans`) only for the traces you actually inspect.
-7. **Never paste large payloads to the user.** Summarize, cite counts, and reference the
+6. **Traces:** query metadata first (no spans); fetch spans per-trace — to disk
+   (`fetch_to_file.py "/v1/traces/<traceId>/spans"`) — only for the traces you actually
+   inspect.
+7. **Poll status on LIST/summary endpoints, not by-id.** Several by-id endpoints inline
+   the full payload once work completes (NovaPilot `GET /reports/:id` carries the whole
+   `analysis`; AutoFix runs carry the state/quality report). Poll the list for status;
+   fetch the payload to disk exactly once when terminal.
+8. **Never paste large payloads to the user.** Summarize, cite counts, and reference the
    saved file path.
 
 ## Recovery signals

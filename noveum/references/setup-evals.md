@@ -69,7 +69,8 @@ POST /v1/datasets/:slug/items
 { "items": [ { "item_type": "conversational",
     "content": { "input_text": "...", "output_text": "...", "expected_output": "...",
                  "system_prompt": "...", "agent_response": "...", "session_id": "...", "turn_id": 1 } } ] }
-→ 201 { "success": true, "created": N }     // NO item ids returned — re-list to get item_id
+→ 201 { "success": true, "created": N }     // NO item ids returned — get them from
+                                            // GET /v1/datasets/:slug/items/ids (ids only, cheap)
 ```
 
 Items land in the `next_release` version but read back immediately (no publish needed for
@@ -89,13 +90,19 @@ POST /v1/eval-jobs/recommend-scorers   { "datasetSlug": "<slug>" }
 → results.scorers_recommended[]: { scorer_name, reasoning, confidence, priority }
 ```
 
-Cross-reference names against the catalog (`GET /v1/scorers`) to get `scorerId`/`scorerType`
-(live-verified: name `is_json` → id `is_json_scorer`, type `format_validation`). The
-**premium discriminator** is `config.evaluationType` on each catalog entry:
-`"rule-based"` = free, `"llm-based"` = 1 credit/item — use it to compute the estimate and
-the min-5-premium rule. The catalog is large (~130 scorers, ~170 KB) — fetch once, keep
-only the name→id/type/evaluationType map. Present the recommended set + reasoning to the
-user before spending credits.
+Cross-reference names against the catalog to get `scorerId`/`scorerType` (live-verified:
+name `is_json` → id `is_json_scorer`, type `format_validation`). The **premium
+discriminator** is `config.evaluationType` on each catalog entry: `"rule-based"` = free,
+`"llm-based"` = 1 credit/item — use it to compute the estimate and the min-5-premium rule.
+The catalog is **large (~130 scorers, ~170 KB) — never fetch it inline**; stream it to
+disk once and extract just the map:
+
+```
+python scripts/fetch_to_file.py "/v1/scorers" --out /tmp/scorers.json
+python3 -c "import json;d=json.load(open('/tmp/scorers.json'));print('\n'.join(f\"{s['name']}\t{s['id']}\t{s['type']}\t{s.get('config',{}).get('evaluationType')}\" for s in (d if isinstance(d,list) else d.get('scorers',d.get('data',[])))))" | head -140
+```
+
+Present the recommended set + reasoning to the user before spending credits.
 
 ## 4b. Create and trigger the eval job
 
@@ -124,6 +131,13 @@ A 429 `CREDIT_QUOTA_EXCEEDED` means the org is out of credits — stop and tell 
 ```
 GET /v1/eval-jobs/:id/results?runId=<runId>
 ```
+**Default to disk** — the body embeds per-item `results[]` with multi-paragraph judge
+`reasoning` for every scorer; items × scorers beyond ~25 results is already too big
+(and any premium eval has ≥5 scorers by the min-premium rule):
+`python scripts/fetch_to_file.py "/v1/eval-jobs/<id>/results?runId=<runId>" --out /tmp/results.json`,
+then summarize from the file (aggregates first; sample a few failing items' reasoning).
+Inline is acceptable only for tiny smoke runs (a handful of items, rule-based scorers).
+
 Body is a **bare array**, one entry per scorer:
 `{ scorerId, scorerName, totalEvaluations, avgScore, minScore, maxScore, p75/p90/p95/p99Score,
 passedCount, errorCount, results[] }` — per-item results are
