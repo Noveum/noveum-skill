@@ -88,8 +88,10 @@ resources, and 20 workflow prompts.
 
 - Reference tools fully qualified (`noveum:<tool_name>`) when several MCP servers are
   connected.
-- Read `noveum://projects`, `noveum://filter-values`, `noveum://org-status` before
-  querying traces — never invent ids or slugs.
+- Read `noveum://projects` and `noveum://org-status` before querying traces — never
+  invent ids or slugs. For facet values, note `filter-values` **grows with org activity**
+  (user/session id lists): on active orgs fetch it to disk
+  (`fetch_to_file.py "/v1/traces/filter-values"`) and extract only the facet you need.
 - Long-running work is queued: kick off, then poll to a terminal status
   ([api-reference.md](api-reference.md) has the cadence table).
 - **Large payloads:** `@noveum/mcp-local` (npm) is a stdio variant that streams big

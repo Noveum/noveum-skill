@@ -15,8 +15,9 @@ so this gate is mandatory.
 ## 0. Local pre-check (no network, fastest loop)
 
 Set `NOVEUM_DEV_MODE=true` and run the app once: each trace is also written as a JSON
-file under `.noveum_trace_dev/`. Inspect one — spans present, attributes as expected.
-Delete the directory afterwards; never commit it.
+file under `.noveum_trace_dev/`. Inspect one **selectively** (span names + attribute keys
+via grep/jq — a span-heavy trace file is ~145 KB; don't read it whole). Delete the
+directory afterwards; never commit it.
 
 ## 1. Prove connectivity with a known-good trace
 
@@ -38,7 +39,7 @@ NOVEUM_API_KEY=... python scripts/check_integration.py --project <NOVEUM_PROJECT
 # to also report the onboarding milestone: add --org-slug <NOVEUM_ORG_SLUG>
 ```
 
-The script queries recent traces (`GET /v1/traces?include_spans=true`) and grades each
+The script queries recent traces (`GET /v1/traces?includeSpans=true`) and grades each
 check. The attribute names below are what real integrations emit — the script accepts
 all known variants:
 

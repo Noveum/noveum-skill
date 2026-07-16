@@ -16,11 +16,17 @@ evidence, not suggestions.
 POST /v1/autofix/run
 { "preset": "balanced",            // quick | balanced | thorough | deep
   "datasetSlug": "<slug>", "sourceReportId": "<novapilot reportId>" }
-→ poll the run until terminal (deep runs on large fleets can take hours — prefer
-  quick/balanced interactively; schedule deep runs)
+→ poll the run's status via the runs LIST (summaries), until terminal (deep runs on
+  large fleets can take hours — prefer quick/balanced interactively; schedule deep runs)
 ```
 
-Read the completed run's quality report: `recommendations[]` with `diff` objects —
+**The completed run's state/quality report is hundreds of KB to MB — never fetch it
+inline.** Stream it to disk
+(`python scripts/fetch_to_file.py "/v1/autofix/runs/<id>" --out /tmp/autofix.json`) and
+read selectively: `summary` → `recommendations[]` → per-rec `diff`/evidence on demand
+(see `context-safety.md`).
+
+In the quality report, `recommendations[]` carry `diff` objects —
 
 ```json
 "diff": { "kind": "search-replace" | "append-rule",
@@ -55,9 +61,12 @@ Rules:
 - `search` must be copied **character-for-character** from the current prompt (get it from
   the NovaPilot report's `currentPrompt`); a non-matching search no-ops.
 - The user must approve drafts before they run (the API enforces this) — present the
-  drafts, get approval, then trigger and poll.
-- Results come back experiment-by-experiment: `outcome`, `objectiveGain`, `validatedWin`,
-  per-scorer deltas, regressions, held-out N. Report them honestly, including losses.
+  drafts, get approval, then trigger. **Poll status on the runs LIST (summaries), never
+  the by-id run endpoint** (it inlines the full state).
+- Once terminal, read experiment results from the state file you already downloaded
+  (`fetch_to_file.py` as above) — per experiment: `outcome`, `objectiveGain`,
+  `validatedWin`, per-scorer deltas, regressions, held-out N. Report them honestly,
+  including losses.
 
 ## Compare & verify (closing the loop)
 

@@ -47,7 +47,7 @@ Label unvalidated fixes clearly. One concern per PR — don't bundle unrelated f
 
 Once merged and deployed:
 1. Confirm post-fix traffic arrives under the new `service_version`
-   (`GET /v1/traces?service_version=<new>&limit=5`).
+   (`GET /v1/traces?service_version=<new>&size=5`).
 2. If AutoFix is enabled, run the post-apply verify (`experiments-autofix.md` §compare)
    and report the verdict; otherwise re-run the eval job on fresh traffic and compare the
    affected scorers before/after.
