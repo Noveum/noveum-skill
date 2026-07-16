@@ -1,0 +1,11 @@
+{
+  "$comment": "Noveum MCP server config. Interactive clients (Cursor, Claude, VS Code, ChatGPT, ...) can instead add just the URL and complete the OAuth sign-in — no key needed. This template is the Bearer-key form for headless use. Set NOVEUM_API_KEY in the environment; never commit a real key.",
+  "mcpServers": {
+    "noveum": {
+      "url": "https://noveum.ai/api/mcp",
+      "headers": {
+        "Authorization": "Bearer ${NOVEUM_API_KEY}"
+      }
+    }
+  }
+}

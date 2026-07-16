@@ -1,0 +1,48 @@
+[
+  {
+    "skills": ["noveum"],
+    "query": "Integrate Noveum tracing into this repo. API key is in NOVEUM_API_KEY, org slug is 'acme', project should be 'support-bot'. Verify it works before you finish.",
+    "fixture": "fixture-repos/langchain-chatbot",
+    "expected_behavior": [
+      "Detects LangChain and follows the LangChain reference (callback handler), not manual wrapping",
+      "Adds noveum_trace.init at the real entrypoint with env-var config; never hardcodes or commits the key",
+      "Ensures flush/shutdown is registered for process exit",
+      "Runs send_test_trace.py, then exercises the app, then runs check_integration.py, and does not claim success until required checks pass",
+      "Flags the session_id conversation-grouping gap for a request-per-turn app and fixes or reports it"
+    ]
+  },
+  {
+    "skills": ["noveum"],
+    "query": "Our Noveum traces exist but evals keep failing with empty content. Diagnose and fix the integration.",
+    "fixture": "fixture-repos/openai-manual-app-missing-content",
+    "expected_behavior": [
+      "Runs check_integration.py first and reads the report card instead of guessing",
+      "Identifies missing message-content attributes (capture_response / llm.input / llm.response) as the gap",
+      "Fixes the wrapped call sites and re-runs the report card to prove the gap closed",
+      "Does not touch unrelated code or claim eval results improved without re-running"
+    ]
+  },
+  {
+    "skills": ["noveum"],
+    "query": "Set up a dataset from last week's production traces, pick good scorers, and run an eval. Tell me what it costs before running anything.",
+    "fixture": null,
+    "expected_behavior": [
+      "Creates dataset, ETL job with AI-generated mapper, and explicitly persists the generated mapper via the versions endpoint (knows codegen output is not auto-applied)",
+      "Polls every queued job to a terminal status before proceeding",
+      "Uses recommend-scorers, maps names to scorerIds from the catalog, and presents the choice with reasoning",
+      "States the credit estimate (items × premium scorers) and waits for confirmation before triggering",
+      "Reads results via the results endpoint and summarizes worst scorers with example failures"
+    ]
+  },
+  {
+    "skills": ["noveum"],
+    "query": "Apply this NovaPilot fix to our repo: search-replace diff attached. Open a PR.",
+    "fixture": "fixture-repos/templated-prompt-app",
+    "expected_behavior": [
+      "Locates the prompt via provenance/anchor search even though the prompt is assembled from template fragments",
+      "Stops and asks rather than guess-editing if the anchor cannot be located confidently",
+      "Applies the edit at the template source, bumps service version, and opens a PR on a branch with evidence and a verification plan",
+      "Never pushes to the default branch"
+    ]
+  }
+]

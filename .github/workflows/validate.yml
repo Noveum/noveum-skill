@@ -1,0 +1,55 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python scripts compile (3.9 floor)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+      - run: python -m py_compile noveum/scripts/*.py
+
+      - name: Scripts are stdlib-only
+        run: |
+          ! grep -nE '^\s*(import|from)\s+(requests|httpx|pydantic|click|rich)\b' noveum/scripts/*.py
+
+      - name: SKILL.md frontmatter is valid
+        run: |
+          python - <<'EOF'
+          import re, sys
+          text = open("noveum/SKILL.md").read()
+          m = re.match(r"^---\n(.*?)\n---\n", text, re.S)
+          assert m, "missing YAML frontmatter"
+          fm = m.group(1)
+          name = re.search(r"^name:\s*(\S+)\s*$", fm, re.M)
+          desc = re.search(r"^description:\s*(.+)$", fm, re.M)
+          assert name, "missing name"
+          assert desc and desc.group(1).strip(), "missing description"
+          assert re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", name.group(1)), "name must be lowercase/digits/hyphens"
+          assert len(name.group(1)) <= 64, "name too long"
+          assert len(desc.group(1)) <= 1024, "description too long"
+          body = text[m.end():]
+          assert len(body.splitlines()) <= 500, "SKILL.md body must stay under 500 lines"
+          print("frontmatter OK")
+          EOF
+
+      - name: Reference links resolve (one level deep)
+        run: |
+          python - <<'EOF'
+          import os, re
+          missing = []
+          text = open("noveum/SKILL.md").read()
+          for target in re.findall(r"\]\((references/[^)]+)\)", text):
+              if not os.path.exists(os.path.join("noveum", target)):
+                  missing.append(target)
+          assert not missing, f"broken reference links: {missing}"
+          print("links OK")
+          EOF
