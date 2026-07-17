@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.0 — 2026-07-16
+
+Renamed the skill `noveum` → `noveum-ai` (ClawHub listing `@noveum-ai/noveum-ai`).
+
+- Folder `noveum/` → `noveum-ai/`; frontmatter `name: noveum-ai` (this is also the
+  Claude Code invocation name). Publish workflow `skill_path`, CI validation paths, and
+  all install commands updated to match. Install is now `clawhub install noveum-ai` /
+  vendor into `.claude/skills/noveum-ai`.
+- Description tightened to ≤500 chars (ClawHub short-summary limit) while keeping trigger
+  keywords; added a "Learn more" links block (noveum.ai, docs, MCP reference, repo, SDK)
+  so the listing explains what the skill does.
+
 ## 0.4.0 — 2026-07-16
 
 Published to ClawHub with GitHub auto-sync.

@@ -15,18 +15,18 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.9"
-      - run: python -m py_compile noveum/scripts/*.py
+      - run: python -m py_compile noveum-ai/scripts/*.py
 
       - name: Scripts are stdlib-only
         run: |
-          ! grep -nE '^\s*(import|from)\s+(requests|httpx|pydantic|click|rich)\b' noveum/scripts/*.py
+          ! grep -nE '^\s*(import|from)\s+(requests|httpx|pydantic|click|rich)\b' noveum-ai/scripts/*.py
 
       - name: SKILL.md frontmatter is valid (real YAML parse)
         run: |
           pip install pyyaml >/dev/null
           python - <<'EOF'
           import re, yaml
-          text = open("noveum/SKILL.md").read()
+          text = open("noveum-ai/SKILL.md").read()
           m = re.match(r"^---\n(.*?)\n---\n", text, re.S)
           assert m, "missing YAML frontmatter"
           # Must parse as real YAML — a stray ': ' in an unquoted description breaks
@@ -51,9 +51,9 @@ jobs:
           python - <<'EOF'
           import os, re
           missing = []
-          text = open("noveum/SKILL.md").read()
+          text = open("noveum-ai/SKILL.md").read()
           for target in re.findall(r"\]\((references/[^)]+)\)", text):
-              if not os.path.exists(os.path.join("noveum", target)):
+              if not os.path.exists(os.path.join("noveum-ai", target)):
                   missing.append(target)
           assert not missing, f"broken reference links: {missing}"
           print("links OK")

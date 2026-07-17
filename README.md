@@ -6,7 +6,7 @@ your coding agent can run the whole loop **inside your own environment**: instru
 verify → evaluate → diagnose → fix → verify. It gives the agent everything it needs to set
 up and operate Noveum **end to end**, and your code never leaves your machines.
 
-Install it from [ClawHub](https://clawhub.ai/skills/noveum) (`clawhub install noveum`) or
+Install it from [ClawHub](https://clawhub.ai/skills/noveum-ai) (`clawhub install noveum-ai`) or
 vendor it straight from this repo (below).
 
 ```mermaid
@@ -52,7 +52,7 @@ agent that reads `SKILL.md`-style instructions.
 the `noveum-trace` SDK over HTTPS with your org-scoped API key — the same data flow you
 opt into by using the SDK at all. The skill contains no telemetry of its own, no external
 dependencies, and two small stdlib-only Python scripts you can read in one sitting
-(`noveum/scripts/`). The API key is only ever read from the `NOVEUM_API_KEY` environment
+(`noveum-ai/scripts/`). The API key is only ever read from the `NOVEUM_API_KEY` environment
 variable.
 
 ## Install
@@ -62,16 +62,16 @@ variable.
 ```bash
 git clone https://github.com/Noveum/noveum-skill /tmp/noveum-skill
 mkdir -p .claude/skills
-cp -r /tmp/noveum-skill/noveum .claude/skills/noveum
+cp -r /tmp/noveum-skill/noveum-ai .claude/skills/noveum-ai
 ```
 
-**Claude Code (personal):** copy `noveum/` to `~/.claude/skills/noveum`.
+**Claude Code (personal):** copy `noveum-ai/` to `~/.claude/skills/noveum-ai`.
 
-**Claude Enterprise/Team:** an admin can upload the `noveum/` folder as an organization
+**Claude Enterprise/Team:** an admin can upload the `noveum-ai/` folder as an organization
 skill so every seat gets it with zero setup.
 
 **Any other agent (Cursor, Codex, Copilot, …):** point it at
-[`noveum/SKILL.md`](noveum/SKILL.md), or use the same instructions rendered at
+[`noveum-ai/SKILL.md`](noveum-ai/SKILL.md), or use the same instructions rendered at
 [noveum.ai/agents.md](https://noveum.ai/agents.md).
 
 Then just ask your agent: *"Integrate Noveum into this repo and verify traces are
@@ -86,12 +86,12 @@ flowing."*
   `Authorization: Bearer $NOVEUM_API_KEY` against the same endpoints.
 
 Details, decision guide, and `mcp.json` templates:
-[`noveum/references/getting-connected.md`](noveum/references/getting-connected.md).
+[`noveum-ai/references/getting-connected.md`](noveum-ai/references/getting-connected.md).
 
 ## What's inside
 
 ```
-noveum/
+noveum-ai/
 ├── SKILL.md                       # the journey: connect + 7 steps, acceptance-gated
 ├── references/                    # loaded on demand (progressive disclosure)
 │   ├── getting-connected.md       # accounts, keys, REST auth, MCP OAuth + API-key modes
@@ -126,7 +126,7 @@ The skill is published to [ClawHub](https://clawhub.ai) under
 agent with:
 
 ```bash
-clawhub install noveum
+clawhub install noveum-ai
 ```
 
 **Auto-sync:** publishing a GitHub Release here republishes the skill to ClawHub
