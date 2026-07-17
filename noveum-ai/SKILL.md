@@ -1,11 +1,11 @@
 ---
-name: noveum
-description: The Noveum AI reliability & QA engineer for LLM, agent, and voice apps — sets up and operates Noveum.ai end to end in a codebase, integrating the noveum-trace SDK (LangChain, LangGraph, CrewAI, LiveKit, Pipecat, or manual), verifying traces are complete, building evaluation datasets from real traffic, running evals and NovaPilot diagnosis, backtesting fixes with AutoFix, and applying validated fixes as pull requests. Context-safe with large trace and report payloads, and connects over the Noveum MCP server (OAuth or API key). Use when integrating Noveum, adding AI tracing or observability, setting up AI evals, verifying a Noveum integration, connecting to the Noveum MCP server, or applying Noveum-recommended fixes.
+name: noveum-ai
+description: The Noveum AI reliability & QA engineer for LLM, agent, and voice apps. It integrates the noveum-trace SDK (LangChain, CrewAI, LiveKit, Pipecat, or manual), verifies traces are complete, builds eval datasets from real traffic, runs evals and NovaPilot diagnosis, and applies validated fixes as pull requests — all inside your own environment. Connects over the Noveum MCP server (OAuth or API key). Use it to integrate Noveum, set up AI evals, or apply Noveum-recommended fixes.
 license: MIT
-version: 0.4.0
+version: 0.5.0
 homepage: https://noveum.ai/docs/platform/agent-skill
 metadata:
-  version: 0.4.0
+  version: 0.5.0
   homepage: https://noveum.ai
   source: https://github.com/Noveum/noveum-skill
   openclaw:
@@ -35,7 +35,16 @@ metadata:
 Noveum.ai is an AI reliability platform: it traces LLM/agent applications (noveum-trace
 SDK), evaluates them with 100+ calibrated scorers, diagnoses failures (NovaPilot), and
 validates fixes by backtesting (AutoFix). This skill is the complete procedure for setting
-it up in a codebase and operating it.
+it up in a codebase and operating it — Noveum's **AI reliability & QA engineer**, run by
+your own coding agent, inside your own environment.
+
+## Learn more
+
+- **Website:** https://noveum.ai
+- **What this skill does (docs):** https://noveum.ai/docs/platform/agent-skill
+- **MCP server:** https://noveum.ai/docs/platform/mcp-server-reference (endpoint `https://noveum.ai/api/mcp`)
+- **Source & issues:** https://github.com/Noveum/noveum-skill
+- **SDK:** https://github.com/Noveum/noveum-trace (`pip install noveum-trace`)
 
 ## Data flow — read first (and show reviewers on request)
 

@@ -29,7 +29,7 @@ jobs:
     uses: openclaw/clawhub/.github/workflows/skill-publish.yml@v0.23.1
     with:
       # The skill lives in ./noveum (not a skills/ catalog), so target it directly.
-      skill_path: noveum
+      skill_path: noveum-ai
       owner: noveum-ai
       # Real publish on release; manual runs honor the dry_run input (default true).
       dry_run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
