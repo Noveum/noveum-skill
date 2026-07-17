@@ -53,7 +53,7 @@ jobs:
           missing = []
           text = open("noveum-ai/SKILL.md").read()
           for target in re.findall(r"\]\((references/[^)]+)\)", text):
-              if not os.path.exists(os.path.join("noveum", target)):
+              if not os.path.exists(os.path.join("noveum-ai", target)):
                   missing.append(target)
           assert not missing, f"broken reference links: {missing}"
           print("links OK")
