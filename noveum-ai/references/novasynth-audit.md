@@ -20,8 +20,9 @@ payloads (batch analysis, run lists) → `scripts/fetch_to_file.py` (`context-sa
 A scenario is a tree of `events` (`{id, parent_id, action, condition}`) plus `metadata` /
 `scenarioType`. Fan out **one subagent per scenario** for large sets. Check each:
 
-1. **Schema** — every event has `id` + `action`; ids unique; every non-root `parent_id`
-   resolves to an existing id (no orphans, no cycles).
+1. **Schema** — every event has `id` + `action`, ids unique; `parent_id` is null for the
+   root; `condition` is optional (backward-looking; null when gated only by the parent edge);
+   every non-root `parent_id` resolves to an existing id (no orphans, no cycles).
 2. **Reachability** — every event is reachable from the root via `parent_id`.
 3. **Intent match** — the events actually exercise what the scenario `name`/`metadata`/
    `scenarioType` claims (a `red_team`/`edge_case` scenario must contain the adversarial

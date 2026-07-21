@@ -88,8 +88,11 @@ Noveum setup progress:
 - [ ] 7. Apply fixes + verify       → acceptance: new service_version traced, verify run
 ```
 
-Steps 3–6 run entirely on the Noveum platform (API/MCP calls — no code changes).
+Steps 3–6 run on the Noveum platform by default (API/MCP calls — no code changes).
 Steps 1 and 7 change code: smallest reviewable diff, on a branch, PR unless told otherwise.
+The one documented exception: the synthetic branch (step 3) can additionally need local
+`novaeval` execution — custom scorers, coalescing multiple batches into one dataset, or
+rendering the report locally — as called out in the NovaSynth references.
 
 **No production traffic yet, or want targeted adversarial coverage?** Step 3 has a synthetic
 branch: NovaSynth drives your agent with generated personas + scenarios, producing a scored

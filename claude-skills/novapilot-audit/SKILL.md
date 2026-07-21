@@ -6,7 +6,7 @@ trigger: /novapilot-audit
 
 # NovaPilot report audit
 
-A NovaPilot report (`analysis.recommendations[]`) makes claims that are frequently wrong: items don't actually show the cited issue, affected scorers are mis-tagged, or the fix is the wrong altitude (a heavyweight pipeline change where a one-line prompt tweak would do, or vice versa). This skill verifies each recommendation against ground truth instead of trusting the report at face value.
+A NovaPilot report's recommendations make claims that are frequently wrong: items don't actually show the cited issue, affected scorers are mis-tagged, or the fix is the wrong altitude (a heavyweight pipeline change where a one-line prompt tweak would do, or vice versa). This skill verifies each recommendation against ground truth instead of trusting the report at face value.
 
 ## Usage
 
@@ -16,17 +16,20 @@ A NovaPilot report (`analysis.recommendations[]`) makes claims that are frequent
 
 ## Report shape (as produced by NovaPilot)
 
-```
-analysis.recommendations[] = {
-  title, description, category, priority, confidence,
-  actionItems[]            # the recommended fix, as a list of steps
-  affectedScorers[]        # scorer names claimed to be impacted
-  itemIds[]                # dataset item ids this issue was attributed to
-  traceIds[]                # sometimes populated instead of / alongside itemIds
+Recommendations live under `report.analysis.analysis.recommendations` as a **bucket tree** —
+`{systemPrompt, tool, other} × {critical, high, medium, low}`. Each recommendation:
+
+```text
+{ title, description, category, priority, confidence,
+  action_items[]                        # the recommended fix, as a list of steps
+  affected_scorers[]                    # scorer names claimed to be impacted
+  evidence: { item_ids[], trace_ids[] } # attributed occurrences
 }
 ```
 
-Each recommendation = one "issue." Each `itemId` = one attributed occurrence.
+Each recommendation = one "issue." Each `item_id` = one attributed occurrence. (NovaPilot may
+instead emit a **flat** `recommendations[]` array with camelCase keys — `actionItems`,
+`affectedScorers`, `itemIds`/`traceIds`; those map 1:1 to the fields above.)
 
 ## Setup
 
@@ -40,7 +43,7 @@ Run the phases below **in order** — each phase's survivors feed the next.
 
 ### Phase 1 — Item attribution verification
 
-For every recommendation, fan out **one subagent per `(issue, itemId)` pair** — never batch multiple items into one subagent call, since a bad attribution needs to be caught individually.
+For every recommendation, fan out **one subagent per `(issue, item_id)` pair** — never batch multiple items into one subagent call, since a bad attribution needs to be caught individually.
 
 Give each subagent:
 - The full recommendation text (title, description, the specific claim being checked).
@@ -59,14 +62,14 @@ Ask each subagent for a single verdict: **ATTRIBUTED / NOT ATTRIBUTED / UNVERIFI
 
 ### Phase 2 — Affected-scorer sanity check
 
-For each issue that survived Phase 1 (has ≥1 attributed item), check whether `affectedScorers[]` is actually the right set:
+For each issue that survived Phase 1 (has ≥1 attributed item), check whether `affected_scorers[]` is actually the right set:
 - Do the surviving attributed items show these scorers scoring low (or failing) in their scorer results? Pull actual scorer results for those items, don't trust the report's claim.
-- Are there other scorers that *should* be listed but aren't (the issue clearly implicates them but they're missing from `affectedScorers`)?
+- Are there other scorers that *should* be listed but aren't (the issue clearly implicates them but they're missing from `affected_scorers`)?
 - Flag: scorers listed but not actually low → **spurious**; scorers that should be listed but aren't → **missing**.
 
 ### Phase 3 — Fix sanity check
 
-For each issue still standing, evaluate `actionItems[]` given the issue + surviving items + real scorer results:
+For each issue still standing, evaluate `action_items[]` given the issue + surviving items + real scorer results:
 - **Altitude check**: is this a prompt-level issue being given a pipeline-level fix (or vice versa)? NovaPilot systematically over-engineers here — call out when a one-line system-prompt instruction would fix what's being proposed as a new pipeline stage/guard, and vice versa when a structural/deterministic problem is being handed a "tell the model to try harder" prompt patch.
 - **Plausibility**: does the fix actually address the root cause shown in the items, or just the symptom in the title?
 - **Blast radius**: could this fix plausibly break other flows/scenarios not covered by the attributed items? Note specific concerns (e.g. "banning this phrase outright will also suppress it in the one scenario where it's required").

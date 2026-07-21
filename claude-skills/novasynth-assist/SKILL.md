@@ -24,7 +24,7 @@ This skill exists because the analysis half of the loop is full of gotchas (REST
 ## Setup — auth & base URL
 
 - REST base: `https://api.noveum.ai/api/v1`
-- Bearer key: read from the `noveum` MCP config in `~/.claude.json` (`mcpServers.noveum` headers/env), or `$NOVEUM_API_KEY`. **Never hardcode the key in this file.**
+- Bearer key precedence: `$NOVEUM_API_KEY` (environment or a local `.env`) → a project-scoped `<PROJECT>_NOVEUM_API_KEY` for multi-project setups → the `noveum` MCP config in `~/.claude.json` (`mcpServers.noveum` headers/env). **Never hardcode the key in this file.**
 - Run-detail URL shown to the user: `https://noveum.ai/app/<org>/projects/<projectId>/novasynth/runs/<batchRunId>/<runId>`
 
 ---
@@ -34,7 +34,7 @@ This skill exists because the analysis half of the loop is full of gotchas (REST
 Input: a `scenarios.json` (list of scenario objects, each with `events` = nodes with `id / parent_id / action / condition / fixed` and scenario-level `metadata`).
 
 Checklist per scenario:
-1. **Schema** — every event has `id`, `parent_id` (root = null), `action`, `condition`; ids unique; every non-root `parent_id` resolves to an existing id (no orphans, no cycles).
+1. **Schema** — every event has `id` + `action`, ids unique; `parent_id` is null for the root; `condition` is optional (backward-looking; null when gated only by the parent edge); every non-root `parent_id` resolves to an existing id (no orphans, no cycles).
 2. **Reachability** — every event is reachable from the root via `parent_id`.
 3. **Intent match** — the events actually exercise what the scenario `name`/`metadata` claims (e.g. a "third_party_pickup" tag must have a third-party event, not happy-path events). This is the check that caught the broken S24 last time.
 4. **Coverage tag** — `metadata` (e.g. `loop:N_handle_concerns:many`, `pb:PB_third_party_pickup`) is consistent with the events.

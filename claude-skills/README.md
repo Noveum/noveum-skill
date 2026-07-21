@@ -20,5 +20,16 @@ on their own, outside the full journey.
 
 ## Auth
 
-All talk to the Noveum REST API (`https://api.noveum.ai/api/v1`) or the `noveum` MCP server.
-Set `NOVEUM_API_KEY` in your environment (or a local `.env`) — never hardcode a key in these files.
+The **platform-facing** skills — `novasynth-run`, `novasynth-assist`, `novapilot-audit`,
+`noveum-dataset` — talk to the Noveum REST API (`https://api.noveum.ai/api/v1`) or the
+`noveum` MCP server. Credential precedence (highest first):
+
+1. an explicit `--api-key` flag (the `noveum-dataset` scripts),
+2. `NOVEUM_API_KEY` in the environment or a local `.env`,
+3. a project-scoped `<PROJECT>_NOVEUM_API_KEY` for multi-project setups.
+
+`novasynth-assist` can additionally read the key from the `noveum` MCP config in
+`~/.claude.json`. **Never hardcode a key in these files.**
+
+`novaeval-scorer` is **not** platform-facing — it edits the NovaEval source repo and needs a
+key only for the optional audio-fetch endpoint (`NOVEUM_API_KEY` or `EXOTEL_API_KEY`).

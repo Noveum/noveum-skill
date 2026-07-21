@@ -47,13 +47,18 @@ agent that reads `SKILL.md`-style instructions.
 
 ## Data flow (for your security review)
 
-**Your code never leaves your environment.** The skill runs inside *your* agent with
-*your* credentials. The only data sent to Noveum is telemetry (traces/spans) emitted by
-the `noveum-trace` SDK over HTTPS with your org-scoped API key — the same data flow you
+**Your code never leaves your environment.** The `noveum-ai` skill runs inside *your* agent
+with *your* credentials. The only data it sends to Noveum is telemetry (traces/spans) emitted
+by the `noveum-trace` SDK over HTTPS with your org-scoped API key — the same data flow you
 opt into by using the SDK at all. The skill contains no telemetry of its own, no external
 dependencies, and two small stdlib-only Python scripts you can read in one sitting
 (`noveum-ai/scripts/`). The API key is only ever read from the `NOVEUM_API_KEY` environment
 variable.
+
+This telemetry-only guarantee is specific to `noveum-ai`. The standalone `claude-skills/`
+(below) are separate tools with their own data-transfer behavior — notably `noveum-dataset`
+can **upload** dataset items, scorer results, and audio, and the NovaSynth skills fetch
+transcripts and scores. Review each before use.
 
 ## Install
 
