@@ -97,18 +97,26 @@ noveum-ai/
 │   ├── getting-connected.md       # accounts, keys, REST auth, MCP OAuth + API-key modes
 │   ├── integrate-langchain.md     #   + crewai, livekit, pipecat, openai-manual
 │   ├── verify-traces.md           # the completeness report card (step-1 gate)
-│   ├── setup-evals.md             # datasets → ETL → scorers → eval runs
+│   ├── setup-evals.md             # datasets → ETL → scorers → eval runs (real traffic)
+│   ├── novasynth-generate-run.md  # step-3 synthetic branch: generate + run NovaSynth calls
+│   ├── novasynth-audit.md         # validate scenarios + audit calls & scorer verdicts
 │   ├── diagnose-novapilot.md      # diagnosis reports
+│   ├── novapilot-audit.md         # verify a report before acting on it
 │   ├── experiments-autofix.md     # backtested fixes & experiments
 │   ├── apply-fixes.md             # fix → repo edit → PR → verify
 │   ├── api-reference.md           # endpoints, polling contract, credits
 │   └── troubleshooting.md
 ├── scripts/
 │   ├── send_test_trace.py         # prove connectivity with one known-good trace
-│   └── check_integration.py       # the trace-completeness report card
+│   ├── check_integration.py       # the trace-completeness report card
+│   └── fetch_to_file.py           # stream large payloads to disk (context safety)
 └── assets/
     └── mcp.json.template
 ```
+
+Also at the repo root: **`claude-skills/`** — standalone, à-la-carte Claude Code skills for
+Noveum (the NovaSynth capabilities above as individual skills, plus `noveum-dataset` and the
+internal-only `novaeval-scorer`). See [`claude-skills/README.md`](claude-skills/README.md).
 
 ## Quality & provenance
 
