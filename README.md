@@ -47,13 +47,18 @@ agent that reads `SKILL.md`-style instructions.
 
 ## Data flow (for your security review)
 
-**Your code never leaves your environment.** The skill runs inside *your* agent with
-*your* credentials. The only data sent to Noveum is telemetry (traces/spans) emitted by
-the `noveum-trace` SDK over HTTPS with your org-scoped API key — the same data flow you
+**Your code never leaves your environment.** The `noveum-ai` skill runs inside *your* agent
+with *your* credentials. The only data it sends to Noveum is telemetry (traces/spans) emitted
+by the `noveum-trace` SDK over HTTPS with your org-scoped API key — the same data flow you
 opt into by using the SDK at all. The skill contains no telemetry of its own, no external
-dependencies, and two small stdlib-only Python scripts you can read in one sitting
+dependencies, and three small stdlib-only Python scripts you can read in one sitting
 (`noveum-ai/scripts/`). The API key is only ever read from the `NOVEUM_API_KEY` environment
 variable.
+
+This telemetry-only guarantee is specific to `noveum-ai`. The standalone `claude-skills/`
+(below) are separate tools with their own data-transfer behavior — notably `noveum-dataset`
+can **upload** dataset items, scorer results, and audio, and the NovaSynth skills fetch
+transcripts and scores. Review each before use.
 
 ## Install
 
@@ -97,18 +102,26 @@ noveum-ai/
 │   ├── getting-connected.md       # accounts, keys, REST auth, MCP OAuth + API-key modes
 │   ├── integrate-langchain.md     #   + crewai, livekit, pipecat, openai-manual
 │   ├── verify-traces.md           # the completeness report card (step-1 gate)
-│   ├── setup-evals.md             # datasets → ETL → scorers → eval runs
+│   ├── setup-evals.md             # datasets → ETL → scorers → eval runs (real traffic)
+│   ├── novasynth-generate-run.md  # step-3 synthetic branch: generate + run NovaSynth calls
+│   ├── novasynth-audit.md         # validate scenarios + audit calls & scorer verdicts
 │   ├── diagnose-novapilot.md      # diagnosis reports
+│   ├── novapilot-audit.md         # verify a report before acting on it
 │   ├── experiments-autofix.md     # backtested fixes & experiments
 │   ├── apply-fixes.md             # fix → repo edit → PR → verify
 │   ├── api-reference.md           # endpoints, polling contract, credits
 │   └── troubleshooting.md
 ├── scripts/
 │   ├── send_test_trace.py         # prove connectivity with one known-good trace
-│   └── check_integration.py       # the trace-completeness report card
+│   ├── check_integration.py       # the trace-completeness report card
+│   └── fetch_to_file.py           # stream large payloads to disk (context safety)
 └── assets/
     └── mcp.json.template
 ```
+
+Also at the repo root: **`claude-skills/`** — standalone, à-la-carte Claude Code skills for
+Noveum (the NovaSynth capabilities above as individual skills, plus `noveum-dataset` and the
+internal-only `novaeval-scorer`). See [`claude-skills/README.md`](claude-skills/README.md).
 
 ## Quality & provenance
 

@@ -2,10 +2,10 @@
 name: noveum-ai
 description: The Noveum AI reliability & QA engineer for LLM, agent, and voice apps. It integrates the noveum-trace SDK (LangChain, CrewAI, LiveKit, Pipecat, or manual), verifies traces are complete, builds eval datasets from real traffic, runs evals and NovaPilot diagnosis, and applies validated fixes as pull requests — all inside your own environment. Connects over the Noveum MCP server (OAuth or API key). Use it to integrate Noveum, set up AI evals, or apply Noveum-recommended fixes.
 license: MIT
-version: 0.5.0
+version: 0.6.0
 homepage: https://noveum.ai/docs/platform/agent-skill
 metadata:
-  version: 0.5.0
+  version: 0.6.0
   homepage: https://noveum.ai
   source: https://github.com/Noveum/noveum-skill
   openclaw:
@@ -80,14 +80,23 @@ Noveum setup progress:
 - [ ] 1. Integrate the SDK          → acceptance: step 2 passes
 - [ ] 2. Verify trace completeness  → acceptance: scripts/check_integration.py exit 0
 - [ ] 3. Build an eval dataset      → acceptance: ETL run completed, items > 0
+        ↳ real traffic (ETL) OR synthetic traffic (NovaSynth) — validate + audit either way
 - [ ] 4. Run evaluations            → acceptance: eval run completed, results read
 - [ ] 5. Diagnose with NovaPilot    → acceptance: report status completed
+        ↳ audit the report before acting on any recommendation
 - [ ] 6. Backtest fixes (if AutoFix enabled) → acceptance: experiment results returned
 - [ ] 7. Apply fixes + verify       → acceptance: new service_version traced, verify run
 ```
 
-Steps 3–6 run entirely on the Noveum platform (API/MCP calls — no code changes).
+Steps 3–6 run on the Noveum platform by default (API/MCP calls — no code changes).
 Steps 1 and 7 change code: smallest reviewable diff, on a branch, PR unless told otherwise.
+The one documented exception: the synthetic branch (step 3) can additionally need local
+`novaeval` execution — custom scorers, coalescing multiple batches into one dataset, or
+rendering the report locally — as called out in the NovaSynth references.
+
+**No production traffic yet, or want targeted adversarial coverage?** Step 3 has a synthetic
+branch: NovaSynth drives your agent with generated personas + scenarios, producing a scored
+dataset that feeds steps 4–5 the same way — [references/novasynth-generate-run.md](references/novasynth-generate-run.md).
 
 ```mermaid
 flowchart TD
@@ -117,8 +126,9 @@ calls through a Python service, or POST trace JSON directly (ingest contract in
 ## Remaining references (read when the step starts)
 
 - Step 2: [references/verify-traces.md](references/verify-traces.md) — the acceptance gate
-- Steps 3–4: [references/setup-evals.md](references/setup-evals.md)
-- Step 5: [references/diagnose-novapilot.md](references/diagnose-novapilot.md)
+- Steps 3–4 (real traffic): [references/setup-evals.md](references/setup-evals.md)
+- Steps 3–4 (synthetic traffic): [references/novasynth-generate-run.md](references/novasynth-generate-run.md) — generate personas/scenarios + run calls; then validate + audit them: [references/novasynth-audit.md](references/novasynth-audit.md)
+- Step 5: [references/diagnose-novapilot.md](references/diagnose-novapilot.md) — then verify it: [references/novapilot-audit.md](references/novapilot-audit.md)
 - Step 6: [references/experiments-autofix.md](references/experiments-autofix.md)
 - Step 7: [references/apply-fixes.md](references/apply-fixes.md)
 - Connection modes (REST, MCP OAuth, MCP API-key): [references/getting-connected.md](references/getting-connected.md)

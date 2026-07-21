@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.6.0 — 2026-07-21
+
+Added the **NovaSynth synthetic-traffic branch** to the journey — generate test traffic when
+there's little/no production data, or for targeted adversarial coverage — plus a report-audit
+step. All platform-first (`/api/v1/novasynth/...`), grounded in the live API.
+
+- **New `references/novasynth-generate-run.md`** — step 3 synthetic branch: register the
+  agent-under-test endpoint, generate/create personas + scenarios (async → poll
+  `generation-jobs`), trigger a batch run (`endpointId` + `pairs`/matrix, `maxCallDurationS`
+  cap), poll to terminal, pull scores from `batch-analysis`, and optionally render the
+  NovaSynth PDF report (`Affects Call Success` gate). Feeds steps 4–5 like real traffic.
+- **New `references/novasynth-audit.md`** — validate scenarios before spending call credits
+  (schema/reachability/intent/coverage), then audit each call (one subagent per run) + the
+  scorer verdicts, carrying the scorer false-pass/false-fail cheatsheet (LLM judges
+  under-penalize hard gates; `item_summary`/audio `-1` are infra, not bot faults).
+- **New `references/novapilot-audit.md`** — step 5 verify: audit a NovaPilot report's item
+  attributions, affected scorers, and fix altitude before AutoFix/apply. One subagent per
+  `(issue, item_id)` pair; drop issues with zero attributed items.
+- **`SKILL.md`** — journey checklist + references list wired for the synthetic branch (step 3)
+  and report audit (step 5).
+- **New `claude-skills/`** — the standalone à-la-carte versions of these skills (+
+  `noveum-dataset`, and the internal-only `novaeval-scorer`), for use outside the full journey.
+
 ## 0.5.0 — 2026-07-16
 
 Renamed the skill `noveum` → `noveum-ai` (ClawHub listing `@noveum-ai/noveum-ai`).
