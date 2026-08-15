@@ -1,0 +1,4 @@
+interface:
+  display_name: "Post Audit Analysis"
+  short_description: "Find and document new NovaPilot failure causes"
+  default_prompt: "Use $post-audit-analysis to inspect unusable NovaPilot recommendations, identify novel root causes, and document reproducible evidence."
