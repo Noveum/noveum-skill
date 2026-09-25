@@ -83,8 +83,11 @@ Generic `mcp.json` (Cursor and most clients — see `assets/mcp.json.template`):
 
 ## MCP usage rules + local variant
 
-The server exposes ~60 tools (generated from the live API), 16 read-first `noveum://`
-resources, and 20 workflow prompts.
+The server exposes tools generated from the live API, read-first `noveum://`
+resources, and workflow prompts. After connecting, use `tools/list`,
+`resources/list`, and `prompts/list` to discover the catalog available to the
+current connection. Follow `nextCursor` when a list response is paginated.
+Do not assume a fixed catalog count; available entries can change as the API evolves.
 
 - Reference tools fully qualified (`noveum:<tool_name>`) when several MCP servers are
   connected.
