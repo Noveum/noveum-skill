@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **New `claude-skills/novabot/`**: NovaBot's system instructions, moved out of the Noveum app so its
+  behavior is edited here. The app pins this repo by commit and loads the `SKILL.md` body.
+
 ## 0.6.0 — 2026-07-21
 
 Added the **NovaSynth synthetic-traffic branch** to the journey — generate test traffic when
