@@ -17,6 +17,7 @@ on their own, outside the full journey.
 | `novapilot-audit/` | Audit a NovaPilot report JSON: are its recommendations, item attributions, and fixes actually trustworthy? |
 | `noveum-dataset/` | Download/upload Noveum datasets, items, scorer results, and audio via the REST API (self-contained Python scripts). |
 | `novaeval-scorer/` | **Internal / contributor tooling** — add & register a new scorer inside the NovaEval source repo. Requires a NovaEval checkout; not a platform/API skill. |
+| `novabot/` | **Loaded by the Noveum app**: NovaBot's system instructions (evidence grounding, answer contract, memory, approval boundary). Change NovaBot's behavior here; not a drop-in skill. |
 
 ## Auth
 
