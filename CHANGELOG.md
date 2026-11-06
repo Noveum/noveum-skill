@@ -4,6 +4,7 @@
 
 - **New `claude-skills/novabot/`**: NovaBot's system instructions, moved out of the Noveum app so its
   behavior is edited here. The app pins this repo by commit and loads the `SKILL.md` body.
+- **Helper scripts no longer follow redirects with the API key attached**: every authenticated request fails on a 3xx, the domainless `apiKeyCookie` is gone, and the dataset scripts refuse to fall back to another key when `--env-key` is unset or several project keys are present.
 
 ## 0.6.0 — 2026-07-21
 

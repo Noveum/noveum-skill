@@ -50,6 +50,14 @@ VOICE_LATENCY_KEYS = (
 PROVENANCE_KEYS = ("code.file.path", "code.filepath")
 
 
+class RefuseRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+OPENER = urllib.request.build_opener(RefuseRedirects)
+
+
 def api_get(endpoint: str, api_key: str, path: str, params: dict) -> dict:
     qs = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})
     url = f"{endpoint}{path}" + (f"?{qs}" if qs else "")
@@ -57,7 +65,7 @@ def api_get(endpoint: str, api_key: str, path: str, params: dict) -> dict:
         url,
         headers={"Authorization": f"Bearer {api_key}", "Accept": "application/json"},
     )
-    with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_S) as res:
+    with OPENER.open(req, timeout=REQUEST_TIMEOUT_S) as res:
         return json.loads(res.read().decode(errors="replace"))
 
 
