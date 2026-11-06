@@ -10,7 +10,7 @@ Talks directly to the Noveum REST API. **No NovaEval SDK / no app.* imports.** A
 ```
 GET    /api/v1/datasets/{slug}/items/ids
 GET    /api/v1/datasets/{slug}/items/{itemId}
-GET    /api/v1/audio/{audio_uuid}
+GET    /api/v1/audio/{audio_uuid}/serve
 POST   /api/v1/datasets
 POST   /api/v1/datasets/{slug}/items
 POST   /api/v1/datasets/{slug}/versions/publish
