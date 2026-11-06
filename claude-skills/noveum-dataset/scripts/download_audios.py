@@ -16,6 +16,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import sys
 import tempfile
 import time
@@ -33,6 +34,7 @@ MAX_RETRIES = 3
 TIMEOUT_S = 120
 AUDIO_EXTS = (".wav", ".mp3", ".ogg", ".flac", ".m4a", ".webm", ".aac")
 SNIFF_BYTES = 16
+AUDIO_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}")
 
 
 def sniff_audio_ext(head: bytes) -> str | None:
@@ -120,10 +122,17 @@ def harvest_audio_uuids(items: list[dict]) -> list[str]:
 def download_one(
     uuid: str, out_dir: Path, auth: dict, log: logging.Logger, overwrite: bool
 ) -> tuple[str, str | None]:
+    if not AUDIO_ID_RE.fullmatch(uuid):
+        return uuid, "invalid audio id: only letters, digits, '-' and '_' are allowed"
     out_dir.mkdir(parents=True, exist_ok=True)
+    out_root = out_dir.resolve()
+    candidates = [out_dir / f"{uuid}{ext}" for ext in AUDIO_EXTS]
+    for candidate in candidates:
+        if candidate.is_symlink() or candidate.resolve().parent != out_root:
+            return uuid, f"refusing to use {candidate}: it is a symlink or outside {out_root}"
     if not overwrite:
-        for ext in AUDIO_EXTS:
-            if is_cached_audio(out_dir / f"{uuid}{ext}"):
+        for candidate in candidates:
+            if is_cached_audio(candidate):
                 return uuid, None
 
     url = f"{BASE_URL}/api/v1/audio/{uuid}/serve"
