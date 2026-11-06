@@ -29,6 +29,14 @@ DEFAULT_ENDPOINT = "https://api.noveum.ai/api"
 REQUEST_TIMEOUT_S = 30
 
 
+class RefuseRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+OPENER = urllib.request.build_opener(RefuseRedirects)
+
+
 def build_trace(project: str) -> dict:
     trace_id = uuid.uuid4().hex
     end = datetime.now(timezone.utc)
@@ -97,7 +105,7 @@ def main() -> int:
         },
     )
     try:
-        with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_S) as res:
+        with OPENER.open(req, timeout=REQUEST_TIMEOUT_S) as res:
             payload = res.read().decode(errors="replace")
             print(f"OK: HTTP {res.status} from {url}")
             print(payload[:2000])

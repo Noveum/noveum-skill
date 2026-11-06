@@ -6,8 +6,8 @@ Either pass UUIDs directly via --uuids, or point --input at a dataset JSON
 audio_uuid it can find inside stt_data/tts_data/raw_complete_audio.
 
 Equivalent to:
-  curl https://noveum.ai/api/v1/audio/{audio_uuid} \\
-       -H 'Authorization: Bearer $KEY' --cookie 'apiKeyCookie=$KEY' > out.wav
+  curl https://noveum.ai/api/v1/audio/{audio_uuid}/serve \\
+       -H 'Authorization: Bearer $KEY' > out.wav
 """
 
 from __future__ import annotations
@@ -16,7 +16,9 @@ import argparse
 import json
 import logging
 import os
+import re
 import sys
+import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -30,16 +32,67 @@ from _common import auth_kwargs, resolve_api_key  # noqa: E402
 BASE_URL = os.getenv("NOVEUM_BASE_URL", "https://noveum.ai")
 MAX_RETRIES = 3
 TIMEOUT_S = 120
-EXTS_BY_CT = {
-    "audio/wav": ".wav",
-    "audio/x-wav": ".wav",
-    "audio/ogg": ".ogg",
-    "audio/mpeg": ".mp3",
-    "audio/mp4": ".m4a",
-    "audio/aac": ".aac",
-    "audio/flac": ".flac",
-    "audio/webm": ".webm",
-}
+AUDIO_EXTS = (".wav", ".mp3", ".ogg", ".flac", ".m4a", ".webm", ".aac")
+SNIFF_BYTES = 16
+AUDIO_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}")
+
+
+def sniff_audio_ext(head: bytes) -> str | None:
+    if head[:4] == b"RIFF" and head[8:12] == b"WAVE":
+        return ".wav"
+    if head[:3] == b"ID3":
+        return ".mp3"
+    if head[:4] == b"OggS":
+        return ".ogg"
+    if head[:4] == b"fLaC":
+        return ".flac"
+    if head[4:8] == b"ftyp":
+        return ".m4a"
+    if head[:4] == b"\x1a\x45\xdf\xa3":
+        return ".webm"
+    if len(head) > 1 and head[0] == 0xFF and head[1] & 0xF6 == 0xF0:
+        return ".aac"
+    if len(head) > 1 and head[0] == 0xFF and head[1] & 0xE0 == 0xE0:
+        return ".mp3"
+    return None
+
+
+def is_cached_audio(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    with path.open("rb") as f:
+        return sniff_audio_ext(f.read(SNIFF_BYTES)) == path.suffix
+
+
+class TruncatedDownload(Exception):
+    pass
+
+
+def save_audio(r: requests.Response, out_dir: Path, uuid: str) -> str | None:
+    fd, tmp_name = tempfile.mkstemp(dir=out_dir, prefix=f".{uuid}.", suffix=".part")
+    tmp = Path(tmp_name)
+    try:
+        head = b""
+        total = 0
+        with os.fdopen(fd, "wb") as f:
+            for chunk in r.iter_content(chunk_size=64 * 1024):
+                if chunk:
+                    if len(head) < SNIFF_BYTES:
+                        head += chunk[: SNIFF_BYTES - len(head)]
+                    f.write(chunk)
+                    total += len(chunk)
+        declared = r.headers.get("Content-Length")
+        if not r.headers.get("Content-Encoding") and declared and declared.isdigit():
+            if total != int(declared):
+                raise TruncatedDownload(f"got {total} of {declared} bytes")
+        ext = sniff_audio_ext(head)
+        if ext is None:
+            content_type = r.headers.get("Content-Type") or "unknown"
+            return f"response is not audio (Content-Type {content_type}, {total} bytes)"
+        os.replace(tmp, out_dir / f"{uuid}{ext}")
+        return None
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 def _parse_maybe_json(v: Any) -> Any:
@@ -69,37 +122,31 @@ def harvest_audio_uuids(items: list[dict]) -> list[str]:
 def download_one(
     uuid: str, out_dir: Path, auth: dict, log: logging.Logger, overwrite: bool
 ) -> tuple[str, str | None]:
-    """Return (uuid, error_str_or_None)."""
+    if not AUDIO_ID_RE.fullmatch(uuid):
+        return uuid, "invalid audio id: only letters, digits, '-' and '_' are allowed"
     out_dir.mkdir(parents=True, exist_ok=True)
-    candidates = [out_dir / f"{uuid}{ext}" for ext in (".wav", ".ogg", ".mp3", "")]
+    out_root = out_dir.resolve()
+    candidates = [out_dir / f"{uuid}{ext}" for ext in AUDIO_EXTS]
+    for candidate in candidates:
+        if candidate.is_symlink() or candidate.resolve().parent != out_root:
+            return uuid, f"refusing to use {candidate}: it is a symlink or outside {out_root}"
     if not overwrite:
-        for c in candidates:
-            if c.is_file() and c.stat().st_size > 0:
-                return uuid, None  # cached
+        for candidate in candidates:
+            if is_cached_audio(candidate):
+                return uuid, None
 
-    url = f"{BASE_URL}/api/v1/audio/{uuid}"
+    url = f"{BASE_URL}/api/v1/audio/{uuid}/serve"
     last_err: str | None = None
     for attempt in range(MAX_RETRIES):
         try:
-            r = requests.get(url, timeout=TIMEOUT_S, stream=True, **auth)
-            if r.status_code == 200:
-                ext = EXTS_BY_CT.get(
-                    (r.headers.get("Content-Type") or "").split(";")[0].strip(),
-                    ".wav",
-                )
-                tmp = out_dir / f"{uuid}{ext}.part"
-                with tmp.open("wb") as f:
-                    for chunk in r.iter_content(chunk_size=64 * 1024):
-                        if chunk:
-                            f.write(chunk)
-                final = out_dir / f"{uuid}{ext}"
-                os.replace(tmp, final)
-                return uuid, None
-            if r.status_code in (429,) or r.status_code >= 500:
-                last_err = f"{r.status_code}"
-                time.sleep(2.0 * (attempt + 1))
-                continue
-            return uuid, f"HTTP {r.status_code}: {r.text[:200]}"
+            with requests.get(url, timeout=TIMEOUT_S, stream=True, **auth) as r:
+                if r.status_code == 200:
+                    return uuid, save_audio(r, out_dir, uuid)
+                if r.status_code in (429,) or r.status_code >= 500:
+                    last_err = f"{r.status_code}"
+                    time.sleep(2.0 * (attempt + 1))
+                    continue
+                return uuid, f"HTTP {r.status_code}: {r.text[:200]}"
         except Exception as e:
             last_err = str(e)
             time.sleep(2.0 * (attempt + 1))

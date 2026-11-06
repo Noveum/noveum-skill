@@ -35,6 +35,14 @@ CHUNK_BYTES = 1 << 16
 PREVIEW_CHARS = 400
 
 
+class RefuseRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+OPENER = urllib.request.build_opener(RefuseRedirects)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("path", help="API path incl. query, starting with /v1/...")
@@ -60,7 +68,7 @@ def main() -> int:
     head = b""
     declared_len = None
     try:
-        with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_S) as res, open(
+        with OPENER.open(req, timeout=REQUEST_TIMEOUT_S) as res, open(
             args.out, "wb"
         ) as out:
             status = res.status

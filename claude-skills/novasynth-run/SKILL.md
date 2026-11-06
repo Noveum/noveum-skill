@@ -41,7 +41,7 @@ These are **two different files** — do not conflate them.
 ## Cross-cutting rules (apply in every phase)
 
 - **Big JSON → curl to a file, never MCP inline.** Scenarios, personas, calls, batch-analysis payloads are huge and blow the context window. Fetch with `curl ... -H "Authorization: Bearer $KEY" > file.json`, then `jq`; let subagents read the files. (Batch-analysis is ~90k+ chars — always to a file.)
-- **Auth.** REST base `https://api.noveum.ai/api/v1`. Key resolution: `$NOVEUM_API_KEY` (from the environment or a local `.env`); for multi-project setups, a project-scoped `<PROJECT>_NOVEUM_API_KEY` var. Never hardcode a key in a file. Some platform routes need **both** the Bearer header and an `apiKeyCookie=$KEY` cookie (the `/noveum-dataset` scripts handle this).
+- **Auth.** REST base `https://api.noveum.ai/api/v1`. Key resolution: `$NOVEUM_API_KEY` (from the environment or a local `.env`); for multi-project setups, a project-scoped `<PROJECT>_NOVEUM_API_KEY` var. Never hardcode a key in a file. Send the key only as the Bearer header, and do not follow redirects with it attached.
 - **Upload only after go-ahead.** If you build a dataset locally and run scorers on it, uploading it to the platform is a checkpoint — get the operator's explicit OK first.
 - **Every number in the final report must come only from scorer results.** If any metric is computed elsewhere, alert the operator and ask them to fix it before trusting the report (see Phase 4 for the one known offender).
 - **Delegate, don't re-derive:** `/novasynth-assist` (scenario validation + transcript/scorer audit), `/noveum-dataset` (all dataset & audio up/download), `/novaeval-scorer` (create/register a scorer), `/novapilot-audit` (audit a NovaPilot report).

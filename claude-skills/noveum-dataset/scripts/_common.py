@@ -5,7 +5,14 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
+
+import requests
+
+
+def _missing_key(message: str) -> NoReturn:
+    print(f"ERROR: {message}", file=sys.stderr)
+    sys.exit(2)
 
 
 def resolve_api_key(
@@ -13,8 +20,6 @@ def resolve_api_key(
     env_key_name: str | None,
     env_file: Path | None,
 ) -> str:
-    """Resolve API key from (in order): CLI flag, named env var, NOVEUM_API_KEY,
-    first ``*_NOVEUM_API_KEY`` found in .env."""
     if env_file is not None and env_file.is_file():
         from dotenv import load_dotenv
 
@@ -29,29 +34,45 @@ def resolve_api_key(
     if cli_key:
         return cli_key.strip()
     if env_key_name:
-        v = os.getenv(env_key_name)
-        if v:
-            return v.strip()
-    if os.getenv("NOVEUM_API_KEY"):
-        return os.environ["NOVEUM_API_KEY"].strip()
-    for k, v in os.environ.items():
-        if k.endswith("_NOVEUM_API_KEY") and v:
-            return v.strip()
-    print(
-        "ERROR: no Noveum API key found. Pass --api-key, set NOVEUM_API_KEY, "
-        "or put *_NOVEUM_API_KEY in .env.",
-        file=sys.stderr,
+        selected = os.getenv(env_key_name, "").strip()
+        if selected:
+            return selected
+        _missing_key(f"{env_key_name} is not set; refusing to fall back to another key.")
+    default_key = os.getenv("NOVEUM_API_KEY", "").strip()
+    if default_key:
+        return default_key
+    scoped = sorted(
+        k for k, v in os.environ.items() if k.endswith("_NOVEUM_API_KEY") and v.strip()
     )
-    sys.exit(2)
+    if len(scoped) == 1:
+        return os.environ[scoped[0]].strip()
+    if scoped:
+        _missing_key(
+            f"several project keys found ({', '.join(scoped)}); pick one with --env-key."
+        )
+    _missing_key(
+        "no Noveum API key found. Pass --api-key, set NOVEUM_API_KEY, "
+        "or put one *_NOVEUM_API_KEY in .env."
+    )
+
+
+def _refuse_redirect(response: requests.Response, *args: Any, **kwargs: Any) -> None:
+    if 300 <= response.status_code < 400:
+        response.close()
+        raise requests.HTTPError(
+            f"refused redirect {response.status_code} from {response.url} "
+            f"to {response.headers.get('Location')}; the API key is only sent to "
+            "NOVEUM_BASE_URL",
+            response=response,
+        )
 
 
 def auth_kwargs(key: str) -> dict[str, Any]:
-    """requests kwargs that match the platform's curl examples:
-       Authorization Bearer header AND apiKeyCookie cookie."""
     return {
         "headers": {
             "Authorization": f"Bearer {key}",
             "Content-Type": "application/json",
         },
-        "cookies": {"apiKeyCookie": key},
+        "allow_redirects": False,
+        "hooks": {"response": _refuse_redirect},
     }
