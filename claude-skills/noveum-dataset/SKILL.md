@@ -10,14 +10,14 @@ Talks directly to the Noveum REST API. **No NovaEval SDK / no app.* imports.** A
 ```
 GET    /api/v1/datasets/{slug}/items/ids
 GET    /api/v1/datasets/{slug}/items/{itemId}
-GET    /api/v1/audio/{audio_uuid}
+GET    /api/v1/audio/{audio_uuid}/serve
 POST   /api/v1/datasets
 POST   /api/v1/datasets/{slug}/items
 POST   /api/v1/datasets/{slug}/versions/publish
 POST   /api/v1/scorers/results/batch
 ```
 
-Auth is **both** `Authorization: Bearer $KEY` header **and** `apiKeyCookie=$KEY` cookie — the platform requires the cookie for some routes. The scripts handle this.
+Auth is the `Authorization: Bearer $KEY` header only. The scripts never follow redirects, so the key is only ever sent to `NOVEUM_BASE_URL`; a 3xx response is reported as an error.
 
 ## When to use
 
@@ -35,7 +35,7 @@ Auth is **both** `Authorization: Bearer $KEY` header **and** `apiKeyCookie=$KEY`
 
 ## API key resolution
 
-Each script tries, in order: `--api-key` flag → `NOVEUM_API_KEY` env → first `*_NOVEUM_API_KEY` env var found in `.env`. `.env` is loaded from the cwd (or `--env-file`). For project-scoped keys (e.g. `<PROJECT>_NOVEUM_API_KEY`), pass `--env-key <PROJECT>_NOVEUM_API_KEY` or export `NOVEUM_API_KEY` first.
+Each script tries, in order: `--api-key` flag → the `--env-key` variable → `NOVEUM_API_KEY` env → the only `*_NOVEUM_API_KEY` env var, when exactly one is set. `.env` is loaded from the cwd (or `--env-file`). If `--env-key` names a variable that is unset, the script exits instead of falling back to another key, and several `*_NOVEUM_API_KEY` vars with no selection is an error. For project-scoped keys (e.g. `<PROJECT>_NOVEUM_API_KEY`), pass `--env-key <PROJECT>_NOVEUM_API_KEY` or export `NOVEUM_API_KEY` first.
 
 ## Important schema gotchas
 

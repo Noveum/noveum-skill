@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Helper scripts no longer follow redirects with the API key attached**: every authenticated request fails on a 3xx, the domainless `apiKeyCookie` is gone, and the dataset scripts refuse to fall back to another key when `--env-key` is unset or several project keys are present.
+- **`download_audios.py` fetches the audio bytes**: it calls `/api/v1/audio/{id}/serve` instead of the JSON metadata route, saves only bodies that are complete and start with a known audio signature (named by the detected format), and no longer treats a non-audio file as a cache hit.
+- **`download_audios.py` keeps writes inside `--output-dir`**: audio ids must be letters, digits, `-` or `_` (so `../`, separators and encoded paths are rejected before any request or file change), and a target that is a symlink or resolves outside the output directory is refused.
+
 ## 0.6.0 — 2026-07-21
 
 Added the **NovaSynth synthetic-traffic branch** to the journey — generate test traffic when
