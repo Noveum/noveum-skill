@@ -7,7 +7,7 @@ audio_uuid it can find inside stt_data/tts_data/raw_complete_audio.
 
 Equivalent to:
   curl https://noveum.ai/api/v1/audio/{audio_uuid}/serve \\
-       -H 'Authorization: Bearer $KEY' > out.wav
+       -H "Authorization: Bearer $KEY" > out.wav
 """
 
 from __future__ import annotations
