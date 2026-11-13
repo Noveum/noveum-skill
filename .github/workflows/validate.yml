@@ -46,6 +46,23 @@ jobs:
           print("frontmatter OK (YAML valid)")
           EOF
 
+      - name: NovaBot instructions are valid
+        run: |
+          python - <<'EOF'
+          import re, yaml
+          text = open("novabot/SKILL.md", encoding="utf-8").read()
+          m = re.match(r"^---\n(.*?)\n---\n", text, re.S)
+          assert m, "missing YAML frontmatter"
+          d = yaml.safe_load(m.group(1))
+          assert isinstance(d, dict) and d.get("name") == "novabot", "name must be novabot"
+          desc = d.get("description")
+          assert isinstance(desc, str) and desc.strip() and len(desc) <= 1024, "bad description"
+          body = text[m.end():].strip()
+          assert body, "the instructions are empty"
+          assert not re.search("[\u2013\u2014]", text), "NovaBot never writes long dashes"
+          print("novabot OK")
+          EOF
+
       - name: Reference links resolve (one level deep)
         run: |
           python - <<'EOF'
