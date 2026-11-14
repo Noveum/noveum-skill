@@ -123,6 +123,11 @@ Also at the repo root: **`claude-skills/`** — standalone, à-la-carte Claude C
 Noveum (the NovaSynth capabilities above as individual skills, plus `noveum-dataset` and the
 internal-only `novaeval-scorer`). See [`claude-skills/README.md`](claude-skills/README.md).
 
+Also at the repo root: **`novabot/`**, NovaBot's own instructions. The NovaBot service in the
+Noveum app loads its `SKILL.md` body as its system prompt and bundles only this folder, pinned
+by commit, so changes to how NovaBot behaves are reviewed here. It is written for NovaBot's
+platform tools and approval cards, not for outside agents, and is not published to ClawHub.
+
 ## Quality & provenance
 
 - Attribute vocabulary and field-gap warnings validated against production Noveum
