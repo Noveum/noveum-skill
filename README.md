@@ -155,6 +155,8 @@ secret `CLAWHUB_TOKEN` (a ClawHub token for a publisher with access to `@noveum-
 
 ## Versioning & updates
 
+[Shashank Agarwal](https://www.linkedin.com/in/shashankagarwal2/) contributed the [first ClawHub publishing and GitHub sync setup](https://github.com/Noveum/noveum-skill/pull/3) in version 0.4.0.
+
 Semver via git tags + [CHANGELOG.md](CHANGELOG.md). The skill keeps durable procedures
 local and fetches volatile detail (exact API schemas) from live surfaces at run time, so
 a vendored copy ages gracefully — but do pull updates occasionally.
