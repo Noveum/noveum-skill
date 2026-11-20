@@ -53,7 +53,7 @@ used the wrong access pattern, never something to work around by "parsing what a
    inspect.
 7. **Poll status on LIST/summary endpoints, not by-id.** Several by-id endpoints inline
    the full payload once work completes (NovaPilot `GET /reports/:id` carries the whole
-   `analysis`; AutoFix runs carry the state/quality report). Poll the list for status;
+   `analysis`; AutoFix runs carry the plan, the parsed report and the markdown report). Poll the list for status;
    fetch the payload to disk exactly once when terminal.
 8. **Never paste large payloads to the user.** Summarize, cite counts, and reference the
    saved file path.
