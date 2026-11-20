@@ -48,8 +48,9 @@ Label unvalidated fixes clearly. One concern per PR — don't bundle unrelated f
 Once merged and deployed:
 1. Confirm post-fix traffic arrives under the new `service_version`
    (`GET /v1/traces?service_version=<new>&size=5`).
-2. If AutoFix is enabled, run the post-apply verify (`experiments-autofix.md` §compare)
-   and report the verdict; otherwise re-run the eval job on fresh traffic and compare the
-   affected scorers before/after.
+2. Re-run the eval job on fresh traffic and compare the affected scorers before and
+   after. If AutoFix is enabled, also run NovaPilot and a new AutoFix run on the
+   post-fix traffic (`experiments-autofix.md`) and compare its verdicts with the
+   earlier run.
 3. Report the outcome to the user either way — including "no measurable change" or
    regressions. The loop is only closed by measurement, not by merging.

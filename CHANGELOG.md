@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **AutoFix matches the platform API**: `experiments-autofix.md` now documents `/v1/autofix/runs`, plan review, start, cancel and per-fix decisions, and reads verdicts from the parsed report. The compare and verify routes it described do not exist, so verification is a fresh NovaPilot and AutoFix run on post-fix traffic.
+- **NovaBot knows AutoFix**: the `novabot/` skill explains AutoFix verdicts, the plan review flow and when to propose deciding a fix, and cites runs as `autofix:<id>`.
 - **New `novabot/` skill: NovaBot's own instructions**: the system prompt the Noveum NovaBot service runs on, moved out of the service code so it is versioned and reviewed here. It is internal to NovaBot and is not published to ClawHub; the NovaBot image bundles only this folder, pinned by commit.
 - **Helper scripts no longer follow redirects with the API key attached**: every authenticated request fails on a 3xx, the domainless `apiKeyCookie` is gone, and the dataset scripts refuse to fall back to another key when `--env-key` is unset or several project keys are present.
 - **`download_audios.py` fetches the audio bytes**: it calls `/api/v1/audio/{id}/serve` instead of the JSON metadata route, saves only bodies that are complete and start with a known audio signature (named by the detected format), and no longer treats a non-audio file as a cache hit.

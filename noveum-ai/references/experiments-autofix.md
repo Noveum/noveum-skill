@@ -1,83 +1,122 @@
-# Validate fixes with AutoFix & experiments (step 6)
+# Validate fixes with AutoFix (step 6)
 
-> **Availability:** AutoFix is rolling out. If `POST /v1/autofix/*` routes return 404 on
-> the org, the feature isn't enabled yet — skip to `apply-fixes.md` and label fixes as
+> **Availability:** AutoFix needs NovaPilot on the organization's plan. If the
+> `/v1/autofix/*` routes return 403 or 404, skip to `apply-fixes.md` and label fixes
 > "diagnosed, not backtested". Do not fake validation.
 
-AutoFix takes a NovaPilot report and **backtests** candidate fixes: it replays the failing
-calls under each candidate prompt on the customer's own model, re-scores both legs with
-the same eval scorers, evolves candidates, and validates champions on a held-out split
-with statistical gates (bootstrap CI + A/A noise floor). The output is fixes with
-evidence, not suggestions.
+AutoFix takes a completed NovaPilot report and **backtests** its recommendations. It turns
+each one into concrete prompt or tool-schema changes, replays the conversations the
+recommendation claims to fix on the customer's own model with and without each change,
+re-scores both with the same eval scorers, evolves the best candidates, and checks the
+winner on held-out conversations it never tuned on. The output is fixes with evidence, not
+suggestions.
 
-## Run AutoFix from a report
+Every route takes `?organizationSlug=<org>`; bodies carry `projectId`.
+
+## 1. Start a run
 
 ```
-POST /v1/autofix/run
-{ "preset": "balanced",            // quick | balanced | thorough | deep
-  "datasetSlug": "<slug>", "sourceReportId": "<novapilot reportId>" }
-→ poll the run's status via the runs LIST (summaries), until terminal (deep runs on
-  large fleets can take hours — prefer quick/balanced interactively; schedule deep runs)
+POST /v1/autofix/runs
+{ "projectId": "<project>", "sourceReportId": "<novapilot reportId>",
+  "preset": "balanced",        // quick | balanced | thorough
+  "reviewPlan": true }         // default: draft a plan first, spend nothing on replays
+→ 201 { "run": { "id": "<runId>", "status": "queued", ... } }
 ```
 
-**The completed run's state/quality report is hundreds of KB to MB — never fetch it
-inline.** Stream it to disk
-(`python scripts/fetch_to_file.py "/v1/autofix/runs/<id>" --out /tmp/autofix.json`) and
-read selectively: `summary` → `recommendations[]` → per-rec `diff`/evidence on demand
-(see `context-safety.md`).
+The source report must be `completed`. Credits are held when the worker starts and
+settled to measured spend at the end; a 429 means the wallet cannot cover the hold. State
+the preset and get the user's go-ahead before starting.
 
-In the quality report, `recommendations[]` carry `diff` objects —
+## 2. Poll
+
+```
+GET /v1/autofix/runs?projectId=<project>&sourceReportId=<reportId>&limit=5   (10s)
+→ { runs: [{ id, status, progress, creditsUsed, ... }], total, limit, offset }
+```
+
+Statuses: `queued`, `planning`, `awaiting_review`, `processing`, then `completed`,
+`failed` or `cancelled`. `progress` counts recommendations backtested, candidates tried,
+validated fixes, clean wins, trade-offs and regressions while the run works. Poll the list,
+never the by-id route, until the status is terminal or `awaiting_review`.
+
+## 3. Review the plan (when `reviewPlan` is true)
+
+At `awaiting_review` the run holds a plan: one entry per change AutoFix will test.
+
+```
+GET /v1/autofix/runs/<runId>?projectId=<project>      → { run: { plan: [...] } }
+```
+
+Each entry is one of three types, all with `id`, `run`, `label`, `origin`, `parentId`,
+`sourceRecId`, `agentName` and `affectedScorers`:
 
 ```json
-"diff": { "kind": "search-replace" | "append-rule",
-          "search": "<verbatim substring or null>", "replace": "<new text>",
-          "rule": "<narrative rule>",
-          "basePrompt": "<prompt as measured>", "fixedPrompt": "<prompt after fix>" }
+{ "type": "prompt.searchReplace", "edit": { "search": "<verbatim prompt text>", "replace": "<new text>" } }
+{ "type": "prompt.append", "replace": "<rule appended to the prompt>" }
+{ "type": "tool.schemaEdit", "toolName": "<tool>", "patch": { "description": "...", "required_add": ["..."] } }
 ```
 
-plus per-fix validation labels (validated win / directional / regression) and
-`experiments[]` (everything tried, with per-scorer before→after deltas).
-
-## Author your own experiments (test a specific hypothesis)
-
-Experiments are drafts until a human approves — authoring is free, running costs credits.
+Show the user the plan, switch off (`run: false`) anything they would never ship, then
+save and start:
 
 ```
-POST /v1/autofix/runs/:runId/experiments
-{ "experiments": [
-    { "id": "exp_1", "type": "prompt.searchReplace",
-      "label": "Force KB lookup before answering",
-      "agentName": "<agent>",                       // multi-agent fleets
-      "affectedScorers": ["faithfulness"],
-      "edit": { "search": "<verbatim substring of the live system prompt>",
-                "replace": "<replacement text>" } },
-    { "id": "exp_2", "type": "prompt.append",
-      "label": "Mandatory closing phrase",
-      "replace": "<rule text appended to the prompt>",
-      "affectedScorers": ["instruction_adherence"] } ] }
+PUT  /v1/autofix/runs/<runId>/plan    { "projectId": "<project>", "plan": [...] }
+POST /v1/autofix/runs/<runId>/start   { "projectId": "<project>" }
 ```
 
-Rules:
-- `search` must be copied **character-for-character** from the current prompt (get it from
-  the NovaPilot report's `currentPrompt`); a non-matching search no-ops.
-- The user must approve drafts before they run (the API enforces this) — present the
-  drafts, get approval, then trigger. **Poll status on the runs LIST (summaries), never
-  the by-id run endpoint** (it inlines the full state).
-- Once terminal, read experiment results from the state file you already downloaded
-  (`fetch_to_file.py` as above) — per experiment: `outcome`, `objectiveGain`,
-  `validatedWin`, per-scorer deltas, regressions, held-out N. Report them honestly,
-  including losses.
+The API rejects a plan with duplicate ids, with nothing switched on, or with an enabled
+variant whose `parentId` is switched off; switch variants off with their parent. A
+`search` must be copied character for character from the live prompt, or it changes
+nothing.
 
-## Compare & verify (closing the loop)
+`POST /v1/autofix/runs/<runId>/cancel { "projectId": "<project>" }` stops a run at its
+next checkpoint; spend so far is charged.
 
-- `GET /v1/autofix/runs/:runId/compare` — health delta vs the baseline run (did things
-  actually improve run-over-run).
-- After a fix ships to production (step 7), the verify endpoint re-scores fresh post-apply
-  traffic against the run's pre-fix health — this is the ground-truth check that the fix
-  worked in the real world, not just in backtest.
+## 4. Read the report
+
+The completed run is large. Stream it to disk and read it selectively (see
+`context-safety.md`):
+
+```
+python scripts/fetch_to_file.py "/v1/autofix/runs/<runId>?projectId=<project>" --out /tmp/autofix.json
+```
+
+`run.report.recommendations[]` holds one entry per fix AutoFix tried. Several fixes can
+share a NovaPilot issue (same `title` and `agentName`), for example a prompt edit and a
+tool-schema change; each has its own unique `key`. Per fix:
+
+- `confidenceTier`: `validated` (proven: target checks improved on held-out conversations
+  and nothing else got clearly worse), `confirmed-defect` (the recorded calls prove the
+  defect; fix it in code or a schema), `strong-evidence` (promising, needs a bigger test),
+  `insufficient-data`, `diagnosed` (not tested yet), `tested-no-effect`, `infra` (not a
+  prompt problem).
+- `band`: the measured effect range on held-out conversations; `excludesZero` false means
+  not conclusive yet.
+- `diff`: `kind` (`search-replace`, `append-rule`, `tool-schema`) with `search`, `replace`,
+  `rule` or `toolChange`.
+- `metrics[]` per check (before, after, delta, readout), `detectedBy[]` (failing checks and
+  fail rates), `evidence[]` (item ids with notes), `nextStep`.
+
+`run.report.experiments[]` lists every change tried with its held-out outcome
+(`win`, `regression`, `no change`), and `run.report.backtestDiagnostics` the totals.
+`run.markdown` is the full written report.
+
+## 5. Record decisions
+
+```
+PUT /v1/autofix/runs/<runId>/recommendations/<key>
+{ "projectId": "<project>", "decision": "adopted" }    // adopted | rejected | null clears it
+```
+
+Decisions are per fix `key`, are visible in the app, and are only accepted on completed
+runs.
 
 ## Which fixes to carry into step 7
 
-Only: (a) validated wins, (b) directional improvements the user explicitly accepts, and
-(c) NovaPilot recommendations the user accepts un-backtested (label them as such in the PR).
-Never carry a fix the backtest flagged as a regression.
+Only (a) `validated` fixes, (b) `strong-evidence` fixes the user explicitly accepts after
+hearing they are not yet proven, and (c) NovaPilot recommendations the user accepts without
+a backtest, labelled as such in the PR. Never carry a fix the backtest flagged as a
+regression. Proven means higher scores from the customer's own checks on replayed
+conversations, not confirmed business impact: say so, and suggest a live A/B test for
+anything business critical. To confirm a shipped fix, run NovaPilot and a new AutoFix run
+on traffic recorded after the change and compare.
