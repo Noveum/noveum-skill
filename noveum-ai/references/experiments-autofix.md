@@ -23,7 +23,9 @@ POST /v1/autofix/runs
 → 201 { "run": { "id": "<runId>", "status": "queued", ... } }
 ```
 
-The source report must be `completed`. Credits are held when the worker starts and
+The source report must be `completed`. AutoFix replays exactly the conversations that
+report analyzed, so a 409 asking you to run NovaPilot again means the report predates
+that record: run NovaPilot again and start from the new report. Credits are held when the worker starts and
 settled to measured spend at the end; a 429 means the wallet cannot cover the hold. State
 the preset and get the user's go-ahead before starting.
 
@@ -109,7 +111,7 @@ PUT /v1/autofix/runs/<runId>/recommendations/<key>
 ```
 
 Decisions are per fix `key`, are visible in the app, and are only accepted on completed
-runs.
+runs. A key that is not in the run's report returns 404.
 
 ## Which fixes to carry into step 7
 
