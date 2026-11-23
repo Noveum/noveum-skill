@@ -37,8 +37,11 @@ GET /v1/autofix/runs?projectId=<project>&sourceReportId=<reportId>&limit=5   (10
 ```
 
 Statuses: `queued`, `planning`, `awaiting_review`, `processing`, then `completed`,
-`failed` or `cancelled`. `progress` counts recommendations backtested, candidates tried,
-validated fixes, clean wins, trade-offs and regressions while the run works. Poll the list,
+`failed` or `cancelled`. While the run works, `progress` has the `phase` (`loading`,
+`analyzing`, `authoring`, `backtesting`, `validating`, `tool_fixes`, `combining`,
+`reporting`), `currentRec` (the issue being worked on), `recsDone` of `recsTotal`, the
+improvement cycle `generation` of `generationsMax`, and spend against the budget. Tell the
+user spend in credits, never dollars; `creditsUsed` is what the run charged. Poll the list,
 never the by-id route, until the status is terminal or `awaiting_review`.
 
 ## 3. Review the plan (when `reviewPlan` is true)
@@ -99,6 +102,13 @@ tool-schema change; each has its own unique `key`. Per fix:
 - `metrics[]` per check (before, after, delta, readout), `detectedBy[]` (failing checks and
   fail rates), `evidence[]` (item ids with notes), `nextStep`.
 
+Start the summary from `run.report.selection`: `selected[]` are the fixes that worked
+(`recId`, `kind`, `tier`, `combined`, `reason`; a `validated` tier is proven, a
+`strong-evidence` tier is promising and never proven), and `rejected[]` the ones dropped,
+with `outcome` and `reason`. `run.report.budget.perRec[]` shows per fix how many cycles ran
+(`generationsRun` of `generationsMax`) and its `stopReason`: `won`, `budget`,
+`max_generations`, `no_candidates` or `skipped`.
+
 `run.report.experiments[]` lists every change tried with its held-out outcome
 (`win`, `regression`, `no change`), and `run.report.backtestDiagnostics` the totals.
 `run.markdown` is the full written report.
@@ -110,8 +120,20 @@ PUT /v1/autofix/runs/<runId>/recommendations/<key>
 { "projectId": "<project>", "decision": "adopted" }    // adopted | rejected | null clears it
 ```
 
-Decisions are per fix `key`, are visible in the app, and are only accepted on completed
-runs. A key that is not in the run's report returns 404.
+Decisions are stored per fix `key`, are visible in the app, and are only accepted on
+completed runs. A key that is not in the run's report returns 404. The app decides per
+issue: adopting one fix of an issue clears the decision on its other fixes, and rejecting
+an issue rejects all of its fixes. Do the same, with the user's note in `note`.
+
+## 6. Share the report
+
+```
+GET  /v1/autofix/runs/<runId>/pdf?projectId=<project>&locale=en      → application/pdf
+POST /v1/autofix/runs/<runId>/send-email { "projectId": "<project>", "scope": "me" }   // me | team
+→ { sent, failed }
+```
+
+Both answer 409 until the run has a report and 422 when the stored report cannot be read.
 
 ## Which fixes to carry into step 7
 
