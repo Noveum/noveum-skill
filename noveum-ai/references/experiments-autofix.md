@@ -122,14 +122,16 @@ dataset did not record the agent's model).
 ## 5. Record decisions
 
 ```
-PUT /v1/autofix/runs/<runId>/recommendations/<key>
-{ "projectId": "<project>", "decision": "adopted" }    // adopted | rejected | null clears it
+PUT /v1/autofix/runs/<runId>/decisions
+{ "projectId": "<project>", "recommendationId": "<key>", "decision": "adopt", "note": "..." }
+// adopt | reject | clear; returns { decisions: [...] } for the whole run
 ```
 
-Decisions are stored per fix `key`, are visible in the app, and are only accepted on
-completed runs. A key that is not in the run's report returns 404. The app decides per
-issue: adopting one fix of an issue clears the decision on its other fixes, and rejecting
-an issue rejects all of its fixes. Do the same, with the user's note in `note`.
+Decisions are per issue and are only accepted on completed runs. `adopt` keeps the fix
+whose `key` you send and clears the decision on the issue's other fixes; `reject` rejects
+every fix of the issue and `clear` removes the issue's decisions (send any fix `key` of
+the issue for both). The change is applied in one transaction, so an issue is never left
+half decided. A key that is not in the run's report returns 404.
 
 ## 6. Share the report
 
