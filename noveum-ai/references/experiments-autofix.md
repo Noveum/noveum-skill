@@ -135,6 +135,11 @@ POST /v1/autofix/runs/<runId>/send-email { "projectId": "<project>", "scope": "m
 
 Both answer 409 until the run has a report and 422 when the stored report cannot be read.
 
+Both are rate limited per organization: the PDF route allows 10 downloads a minute and the
+email route 5 sends every 10 minutes. Over the limit they answer 429 with a `Retry-After`
+header. Unlike the 429 in section 1, this is not about the wallet: wait that many seconds and
+try again, and tell the user why.
+
 ## Which fixes to carry into step 7
 
 Only (a) `validated` fixes, (b) `strong-evidence` fixes the user explicitly accepts after
