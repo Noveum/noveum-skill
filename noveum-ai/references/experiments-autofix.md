@@ -105,9 +105,15 @@ tool-schema change; each has its own unique `key`. Per fix:
 Start the summary from `run.report.selection`: `selected[]` are the fixes that worked
 (`recId`, `kind`, `tier`, `combined`, `reason`; a `validated` tier is proven, a
 `strong-evidence` tier is promising and never proven), and `rejected[]` the ones dropped,
-with `outcome` and `reason`. `run.report.budget.perRec[]` shows per fix how many cycles ran
-(`generationsRun` of `generationsMax`) and its `stopReason`: `won`, `budget`,
-`max_generations`, `no_candidates` or `skipped`.
+with `outcome` and `reason`. An outcome of `regressed` means the held-out test found a clear
+drop on the checks in `harmedScorers`: never ship it. `run.report.budget.perRec[]` shows per
+fix how many cycles ran (`generationsRun`; with a budget the engine decides how many, and
+`generationsMax` is only a safety ceiling) and its `stopReason`: `won`, `budget`, `deadline`,
+`max_generations`, `no_candidates` or `skipped`. Plan entries the engine already knows it
+cannot measure carry `untestable` with a reason (`too_few_items`, `scorer_not_backtestable`,
+`multi_turn_scorer`); they are skipped, so do not offer to turn them on. `run.report.meta`
+says which model the replays ran on (`replayModel`, `replayModelSource` is `fallback` when the
+dataset did not record the agent's model).
 
 `run.report.experiments[]` lists every change tried with its held-out outcome
 (`win`, `regression`, `no change`), and `run.report.backtestDiagnostics` the totals.
