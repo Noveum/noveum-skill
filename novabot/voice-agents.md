@@ -11,7 +11,9 @@ GET /api/v1/voice/calls/{id}) before answering about it.
 
 Propose create_voice_agent with:
 
-- name: what the team calls it, at most 80 characters, not used by another live agent.
+- name: what the team calls it, written as lowercase letters a-z, digits 0-9, _ and -
+  only (renewal_reminder, not "Renewal reminder"), at most 80 characters, not used by
+  another live agent.
 - language: one of English, Hindi, Hinglish, Kannada, Tamil, Telugu, Marathi, Gujarati,
   Bengali, Arabic.
 - systemPrompt: who the agent is, what it does on a call and what it must never do. Keep it
