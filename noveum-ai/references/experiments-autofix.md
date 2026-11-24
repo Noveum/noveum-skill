@@ -105,7 +105,7 @@ tool-schema change; each has its own unique `key`. Per fix:
 Start the summary from `run.report.selection`: `selected[]` are the fixes that worked
 (`recId`, `kind`, `tier`, `combined`, `reason`; a `validated` tier is proven, a
 `strong-evidence` tier is promising and never proven), and `rejected[]` the ones dropped,
-with `outcome` and `reason`. An outcome of `regressed` means the held-out test found a clear
+with `outcome` and `reason`. Every selected fix has passed a ship review of its diff against the current prompt and the issue. An outcome of `review_needed` means that review failed or could not run; `shipReview.problems` lists why (`contradicts_existing_rule`, `weakens_security_or_disclosure`, `duplicates_existing_section`, `placeholder_or_canned_answer`, `off_issue`, `quotes_conversation_content`). Never ship such a fix without a person reading the change. An outcome of `regressed` means the held-out test found a clear
 drop on the checks in `harmedScorers`: never ship it. `run.report.budget.perRec[]` shows per
 fix how many cycles ran (`generationsRun`; with a budget the engine decides how many, and
 `generationsMax` is only a safety ceiling) and its `stopReason`: `won`, `budget`, `deadline`,
