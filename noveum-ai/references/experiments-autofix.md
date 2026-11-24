@@ -19,7 +19,8 @@ Every route takes `?organizationSlug=<org>`; bodies carry `projectId`.
 POST /v1/autofix/runs
 { "projectId": "<project>", "sourceReportId": "<novapilot reportId>",
   "preset": "balanced",        // quick | balanced | thorough
-  "reviewPlan": true }         // default: draft a plan first, spend nothing on replays
+  "reviewPlan": true,          // default: draft a plan first, spend nothing on replays
+  "experiments": [...] }       // optional, review first only: your own changes (step 3)
 → 201 { "run": { "id": "<runId>", "status": "queued", ... } }
 ```
 
@@ -73,6 +74,30 @@ The API rejects a plan with duplicate ids, with nothing switched on, or with an 
 variant whose `parentId` is switched off; switch variants off with their parent. A
 `search` must be copied character for character from the live prompt, or it changes
 nothing.
+
+To test a change of your own, add it to a review-first run while AutoFix drafts the plan
+or while the plan waits for review:
+
+```
+POST /v1/autofix/runs/<runId>/experiments
+{ "projectId": "<project>",
+  "experiment": { "type": "tool.schemaEdit", "sourceRecId": "<issue recId>",
+                  "toolName": "<recorded tool>", "label": "Look the policy up first",
+                  "patch": { "required_add": ["policy_id"] } } }
+→ 201 { "experiment": { "id": "user_...", "origin": "user", "run": true, ... },
+        "placement": "plan", "status": "awaiting_review" }   // "pending" while drafting
+```
+
+The experiment takes the same three shapes as a plan entry, without `id`, `run` or
+`origin`. `sourceRecId` names the report issue it fixes: the `recId` of a `planIssues`
+entry, or the `sourceRecId` of a drafted entry for that issue. Before the plan is drafted,
+use the report recommendation's `id`, or `cand_<n>` for the n-th issue of a report whose
+recommendations carry none. A `search` must appear in
+the agent's recorded prompt and `toolName` must be a tool the recorded conversations list;
+only `description` can change on a tool recorded without a typed parameter schema.
+Otherwise the API answers 400 and names the valid choices. While the plan waits for review
+the change is appended to it, switched on; while AutoFix still drafts it, the change is
+kept and joins the plan once drafted. Other runs, and runs that skip review, answer 409.
 
 `POST /v1/autofix/runs/<runId>/cancel { "projectId": "<project>" }` stops a run at its
 next checkpoint; spend so far is charged.
