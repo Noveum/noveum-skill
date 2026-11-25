@@ -123,7 +123,11 @@ tool-schema change; each has its own unique `key`. Per fix:
 - `band`: the measured effect range on held-out conversations; `excludesZero` false means
   not conclusive yet.
 - `diff`: `kind` (`search-replace`, `append-rule`, `tool-schema`) with `search`, `replace`,
-  `rule` or `toolChange`.
+  `rule` or `toolChange`. A `tool-schema` fix changes the tool definition the agent
+  registers, not its prompt. `toolChange` lists one edit per line: `Tool: <name>`,
+  `New description: <text>`, `Now required: <names>`, `No longer required: <names>` and
+  `Parameter <name>: <JSON schema>`. Step 7 applies it with "Apply a tool-schema fix" in
+  `apply-fixes.md`.
 - `metrics[]` per check (before, after, delta, readout), `detectedBy[]` (failing checks and
   fail rates), `evidence[]` (item ids with notes), `nextStep`.
 
@@ -178,7 +182,7 @@ try again, and tell the user why.
 Only (a) `validated` fixes, (b) `strong-evidence` fixes the user explicitly accepts after
 hearing they are not yet proven, and (c) NovaPilot recommendations the user accepts without
 a backtest, labelled as such in the PR. Never carry a fix the backtest flagged as a
-regression. Proven means higher scores from the customer's own checks on replayed
+regression. A `tool-schema` fix goes to the tool's registered definition, not the prompt. Proven means higher scores from the customer's own checks on replayed
 conversations, not confirmed business impact: say so, and suggest a live A/B test for
 anything business critical. To confirm a shipped fix, run NovaPilot and a new AutoFix run
 on traffic recorded after the change and compare.
