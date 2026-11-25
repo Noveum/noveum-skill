@@ -51,8 +51,12 @@ on the agent's Tools tab.
 
 ## Calls
 
-Launching outbound calls (POST /api/v1/voice/agents/{id}/calls) dials real phone numbers and
-spends credits. Propose it only when the user asks to call, list the numbers in the summary,
-and never retry a launch you were not told failed. Inbound calls need a number bound to the
-agent with POST /api/v1/voice/numbers/{id}/assign. A call's endReason explains why it ended;
-read the call before explaining a failure.
+Launching outbound calls is propose_action with platform_api for
+POST /api/v1/voice/agents/{id}/calls. It dials real phone numbers and spends credits, so it
+always needs the user's explicit approval on the card: propose it only when the user asks to
+call, list the numbers in the summary, and never claim a launch ran before the card was
+approved. Proposing never dials. The approved action supplies the idempotencyKey itself, so
+replaying the same approved action returns the batch already created and dials nobody new;
+do not pass your own key, and never retry a launch you were not told failed. Inbound calls
+need a number bound to the agent with POST /api/v1/voice/numbers/{id}/assign. A call's
+endReason explains why it ended; read the call before explaining a failure.
