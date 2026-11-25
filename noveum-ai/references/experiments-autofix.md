@@ -20,15 +20,27 @@ POST /v1/autofix/runs
 { "projectId": "<project>", "sourceReportId": "<novapilot reportId>",
   "preset": "balanced",        // quick | balanced | thorough
   "reviewPlan": true,          // default: draft a plan first, spend nothing on replays
+  "timeLimitMinutes": 120,     // optional: 90 | 120 | 180 | 240; the preset sets the default
   "experiments": [...] }       // optional, review first only: your own changes (step 3)
 → 201 { "run": { "id": "<runId>", "status": "queued", ... } }
 ```
 
 The source report must be `completed`. AutoFix replays exactly the conversations that
 report analyzed, so a 409 asking you to run NovaPilot again means the report predates
-that record: run NovaPilot again and start from the new report. Credits are held when the worker starts and
-settled to measured spend at the end; a 429 means the wallet cannot cover the hold. State
-the preset and get the user's go-ahead before starting.
+that record: run NovaPilot again and start from the new report.
+
+Credits are held when the worker starts and settled to measured spend at the end; a 429
+means the wallet cannot cover the hold. There are two holds:
+
+| Hold | When | quick | balanced | thorough |
+|---|---|---|---|---|
+| Plan | review-first run starts drafting | 1,000 | 1,000 | 1,000 |
+| Test | `/start` on a reviewed plan, or a test-now run starts | 2,000 | 4,000 | 7,000 |
+
+`run.authorizedCredits` is the sum of the holds the run takes (plan plus test for review
+first, test only for test now): the most it can ever spend, Continue included. State the
+preset and both holds, and get the user's go-ahead before starting. A longer
+`timeLimitMinutes` gives the search more time; it never changes the holds.
 
 ## 2. Poll
 
@@ -63,7 +75,11 @@ Each entry is one of three types, all with `id`, `run`, `label`, `origin`, `pare
 ```
 
 Show the user the plan, switch off (`run: false`) anything they would never ship, then
-save and start:
+save and start. Starting is a separate spend: `/start` takes the test hold on top of the
+plan hold already taken. Quote it and wait for a yes before you call `/start`, for
+example: "Testing this plan holds 4,000 credits on top of the 1,000 the draft held, so
+the run can spend at most 5,000. Start testing?" A 429 from `/start` means the wallet
+cannot cover the test hold.
 
 ```
 PUT  /v1/autofix/runs/<runId>/plan    { "projectId": "<project>", "plan": [...] }
@@ -136,11 +152,12 @@ Start the summary from `run.report.selection`: `selected[]` are the fixes that w
 `strong-evidence` tier is promising and never proven), and `rejected[]` the ones dropped,
 with `outcome` and `reason`. Every selected fix has passed a ship review of its diff against the current prompt and the issue. An outcome of `review_needed` means that review failed or could not run; `shipReview.problems` lists why (`contradicts_existing_rule`, `weakens_security_or_disclosure`, `duplicates_existing_section`, `placeholder_or_canned_answer`, `off_issue`, `quotes_conversation_content`). Never ship such a fix without a person reading the change. An outcome of `regressed` means the held-out test found a clear
 drop on the checks in `harmedScorers`: never ship it. `run.report.budget.perRec[]` shows per
-fix how many cycles ran (`generationsRun`; with a budget the engine decides how many, and
-`generationsMax` is only a safety ceiling) and its `stopReason`: `won`, `budget`, `deadline`,
-`max_generations`, `no_candidates` or `skipped`. Plan entries the engine already knows it
-cannot measure carry `untestable` with a reason (`too_few_items`, `scorer_not_backtestable`,
-`multi_turn_scorer`); they are skipped, so do not offer to turn them on. `run.report.meta`
+fix how many improvement cycles ran (`generationsRun`; with a budget the engine decides how
+many, and `generationsMax` is only a safety ceiling) and why the cycles ended
+(`stopReason`). Why each issue stopped, and what to do about it, is in section 5. Plan
+entries the engine already knows it cannot measure carry `untestable` with a reason
+(`too_few_items`, `scorer_not_backtestable`, `multi_turn_scorer`); they are skipped, so do
+not offer to turn them on. `run.report.meta`
 says which model the replays ran on (`replayModel`, `replayModelSource` is `fallback` when the
 dataset did not record the agent's model).
 
@@ -148,7 +165,66 @@ dataset did not record the agent's model).
 (`win`, `regression`, `no change`), and `run.report.backtestDiagnostics` the totals.
 `run.markdown` is the full written report.
 
-## 5. Record decisions
+## 5. Why each issue stopped, and what to do next
+
+Every entry of `run.report.recommendations[]` carries `stop: { reason, detail }`, where
+`detail` is a short sentence or null. Act on each issue's own `stop.reason`, never on a
+run-wide flag such as `run.report.budget.exhausted`:
+
+| `stop.reason` | What happened | What to do |
+|---|---|---|
+| `won` | a fix was validated | decide it (section 6) |
+| `no_win` | fully tested; nothing beat the current prompt (harmful, trade-off or no effect) | rework the fix or try another experiment (section 3) |
+| `deadline` | the time limit stopped this issue before it finished | Continue with the existing authorization |
+| `budget` | the credit cap stopped this issue before it finished | ask before a higher cap |
+| `no_data` | too few matching conversations to test or certify | ask for more matching traffic |
+| `untestable` | single-turn replay cannot measure this change | multi-turn simulation or a live A/B test |
+| `skipped` | the user left it out of the plan | nothing, unless they want it in a new run |
+
+A run with no validated fix still has a report: its issues, their stop reasons and how
+many were tested. Offer the PDF (section 7) whenever `run.report` exists, so the user can
+share why nothing shipped. Never invent a fix to fill it.
+
+**Deadline: continue, no new hold.** `GET /v1/autofix/runs/<runId>` returns `canContinue`
+and `continueCreditsLeft` (`authorizedCredits` minus `creditsUsed`). When `canContinue` is
+true:
+
+```
+POST /v1/autofix/runs/<runId>/continue
+{ "projectId": "<project>", "timeLimitMinutes": 180 }   // optional, 90 | 120 | 180 | 240
+→ 200 { "run": { "status": "queued", ... }, "started": true }
+```
+
+Continue reruns no finished test. It resumes only the issues the deadline stopped and spends
+at most `continueCreditsLeft`, the rest of the cap the user already approved, so it holds
+nothing new. Still say so and confirm before calling it. A second call while the run is
+queued or working returns the same run with `started: false` and starts nothing. When
+`canContinue` is false (the run is still working, no issue stopped on the deadline, or no
+credits are left), Continue answers 409 with the reason in plain words: pass it on, and
+when credits are the limit treat the issues as `budget`.
+
+Example: `run.authorizedCredits` 5,000, `creditsUsed` 3,150, `canContinue` true,
+`continueCreditsLeft` 1,850, and two issues with `stop.reason: "deadline"`. Say: "The time
+limit stopped two of the five issues before they finished. Continue picks up only those two
+and can spend at most the 1,850 credits left of the 5,000 you approved; nothing new is held.
+Continue with a 180-minute limit?" On a yes, POST `/continue`, then poll as in section 2.
+
+**Budget: ask before a higher cap.** Continue cannot add credits. Example: a balanced
+review-first run, `creditsUsed` 4,980 of `authorizedCredits` 5,000, and one issue with
+`stop.reason: "budget"`. Say: "The 5,000-credit cap ran out before the refund-policy issue
+finished testing. A new thorough run from the same report holds 1,000 credits to draft the
+plan and 7,000 to test it. Start one?" Start nothing until the user says yes, and quote the
+test hold again before its `/start`.
+
+**No data: ask for more matching traffic.** More credits or more time do not help. Example:
+the income-question issue has `stop.reason: "no_data"` and `detail` "Only 4 recorded
+conversations ask about income." Say: "AutoFix could not test the income question: only 4
+recorded conversations ask about it. Once more of that traffic is recorded, run NovaPilot
+on it and start AutoFix from the new report." The issue's
+`detectedBy[]` and `evidence[]` show what a matching conversation looks like; NovaSynth
+(`novasynth-generate-run.md`) can generate test traffic when production traffic is scarce.
+
+## 6. Record decisions
 
 ```
 PUT /v1/autofix/runs/<runId>/decisions
@@ -162,7 +238,7 @@ every fix of the issue and `clear` removes the issue's decisions (send any fix `
 the issue for both). The change is applied in one transaction, so an issue is never left
 half decided. A key that is not in the run's report returns 404.
 
-## 6. Share the report
+## 7. Share the report
 
 ```
 GET  /v1/autofix/runs/<runId>/pdf?projectId=<project>&locale=en      → application/pdf
