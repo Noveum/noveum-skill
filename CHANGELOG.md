@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **NovaBot builds voice agents**: new `novabot/voice-agents.md` reference covering `create_voice_agent`, spec edits with `baseVersion`, tool tokens through the approval card and launching calls; `SKILL.md` points to it.
 - **New `novabot/` skill: NovaBot's own instructions**: the system prompt the Noveum NovaBot service runs on, moved out of the service code so it is versioned and reviewed here. It is internal to NovaBot and is not published to ClawHub; the NovaBot image bundles only this folder, pinned by commit.
 - **Helper scripts no longer follow redirects with the API key attached**: every authenticated request fails on a 3xx, the domainless `apiKeyCookie` is gone, and the dataset scripts refuse to fall back to another key when `--env-key` is unset or several project keys are present.
 - **`download_audios.py` fetches the audio bytes**: it calls `/api/v1/audio/{id}/serve` instead of the JSON metadata route, saves only bodies that are complete and start with a known audio signature (named by the detected format), and no longer treats a non-audio file as a cache hit.
